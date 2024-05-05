@@ -19,6 +19,7 @@ pub mod game {
     pub mod chess_board;
     pub mod enums;
     pub mod error;
+    pub mod position;
 }
 
 pub mod models {
