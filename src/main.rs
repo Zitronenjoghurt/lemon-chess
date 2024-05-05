@@ -14,6 +14,12 @@ pub mod entities {
     pub mod user;
 }
 
+pub mod game {
+    pub mod bit_board;
+    pub mod chess_board;
+    pub mod enums;
+}
+
 pub mod models {
     pub mod response_models;
 }
