@@ -1,0 +1,24 @@
+[package]
+name = "lemon-chess"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7.5", features = ["original-uri"] }
+axum-valid = { version = "0.18.0", features = ["garde", "basic"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+chrono-tz = "0.9.0"
+dotenvy = "0.15.7"
+futures = "0.3.30"
+lazy_static = "1.4.0"
+mongodb = "2.8.2"
+rustrict = "0.7.24"
+serde = { version = "1.0.200", features = ["derive"] }
+tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+utoipa = "4.2.0"
+utoipa-rapidoc = { version = "3.0.0", features = ["axum"] }
+utoipa-redoc = { version = "3.0.0", features = ["axum"] }
+utoipa-swagger-ui = { version = "6.0.0", features = ["axum"] }
+validator = { version = "0.18.1", features = ["derive"] }
