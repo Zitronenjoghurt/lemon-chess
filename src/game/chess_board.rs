@@ -28,6 +28,9 @@ impl Default for ChessBoard {
 impl ChessBoard {
     pub fn make_move(&mut self, piece: Piece, from: u64, to: u64) {
         let piece_index = piece as usize;
+        if !self.pieces[piece_index].get_bit(from) {
+            return;
+        }
 
         // Update piece
         self.pieces[piece_index].clear_bit(from);
