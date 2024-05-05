@@ -37,8 +37,10 @@ mod tests {
         let mut board = BitBoard(0x0000000000000000);
         board.set_bit(0);
         board.set_bit(13);
-        assert!(board.get_bit(0));
-        assert!(board.get_bit(13));
+        assert_eq!(
+            board,
+            BitBoard(0b0000000000000000000000000000000000000000000000000010000000000001)
+        );
     }
 
     #[test]
@@ -46,8 +48,10 @@ mod tests {
         let mut board = BitBoard(0xFFFFFFFFFFFFFFFF);
         board.clear_bit(0);
         board.clear_bit(13);
-        assert!(!board.get_bit(0));
-        assert!(!board.get_bit(13));
+        assert_eq!(
+            board,
+            BitBoard(0b1111111111111111111111111111111111111111111111111101111111111110)
+        );
     }
 
     #[test]
