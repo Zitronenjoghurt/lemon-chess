@@ -30,6 +30,15 @@ impl Default for ChessBoard {
 }
 
 impl ChessBoard {
+    pub fn validate_index(index: u8) -> Result<(), GameError> {
+        if index >= 64 {
+            return Err(GameError::ValidationError(
+                "Board address out of range.".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
     pub fn to_base64(&self) -> Result<String, GameError> {
         let mut bit_vec = Vec::new();
 
@@ -69,14 +78,16 @@ impl ChessBoard {
     }
 
     pub fn is_cell_occupied(&self, index: u8) -> Result<bool, GameError> {
-        let occupied_by_black = self.colors[0].get_bit(index)?;
-        let occupied_by_white = self.colors[1].get_bit(index)?;
+        Self::validate_index(index)?;
+        let occupied_by_black = self.colors[0].get_bit(index);
+        let occupied_by_white = self.colors[1].get_bit(index);
         Ok(occupied_by_black || occupied_by_white)
     }
 
     pub fn piece_at_cell(&self, index: u8) -> Result<Piece, GameError> {
+        Self::validate_index(index)?;
         for piece_id in 0..6 {
-            if self.pieces[piece_id].get_bit(index)? {
+            if self.pieces[piece_id].get_bit(index) {
                 return Ok(Piece::from(piece_id));
             }
         }
@@ -85,8 +96,9 @@ impl ChessBoard {
     }
 
     pub fn color_at_cell(&self, index: u8) -> Result<Color, GameError> {
+        Self::validate_index(index)?;
         for color_id in 0..2 {
-            if self.colors[color_id].get_bit(index)? {
+            if self.colors[color_id].get_bit(index) {
                 return Ok(Color::from(color_id));
             }
         }
@@ -100,7 +112,14 @@ impl ChessBoard {
         Ok((piece, color))
     }
 
+    pub fn mask_by_piece_and_color(&self, piece: Piece, color: Color) -> BitBoard {
+        self.pieces[piece as usize] & self.colors[color as usize]
+    }
+
     pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
+        Self::validate_index(from)?;
+        Self::validate_index(to)?;
+
         let piece = Self::piece_at_cell(self, from)?;
         if piece == Piece::NONE {
             return Ok(false);
@@ -108,16 +127,16 @@ impl ChessBoard {
 
         // Update piece
         let piece_index = piece as usize;
-        self.pieces[piece_index].clear_bit(from)?;
-        self.pieces[piece_index].set_bit(to)?;
+        self.pieces[piece_index].clear_bit(from);
+        self.pieces[piece_index].set_bit(to);
 
         // Update color
-        if self.colors[0].get_bit(from)? {
-            self.colors[0].clear_bit(from)?;
-            self.colors[0].set_bit(to)?;
+        if self.colors[0].get_bit(from) {
+            self.colors[0].clear_bit(from);
+            self.colors[0].set_bit(to);
         } else {
-            self.colors[1].clear_bit(from)?;
-            self.colors[1].set_bit(to)?;
+            self.colors[1].clear_bit(from);
+            self.colors[1].set_bit(to);
         }
 
         Ok(true)
