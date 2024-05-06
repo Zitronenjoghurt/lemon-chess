@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::{
-    cmp::min,
+    fmt::{self, Display, Formatter},
     ops::{BitAnd, BitOr},
 };
 
@@ -9,6 +9,9 @@ pub struct BitBoard(pub u64);
 
 impl BitBoard {
     pub fn get_bit(&self, index: u8) -> bool {
+        if index >= 64 {
+            return false;
+        }
         (self.0 & (1 << index)) != 0
     }
 
@@ -26,63 +29,159 @@ impl BitBoard {
     }
 
     pub fn set_bit(&mut self, index: u8) {
+        if index >= 64 {
+            return;
+        }
         self.0 |= 1 << index;
     }
 
     pub fn clear_bit(&mut self, index: u8) {
+        if index >= 64 {
+            return;
+        }
         self.0 &= !(1 << index);
     }
 
     pub fn flip_bit(&mut self, index: u8) {
+        if index >= 64 {
+            return;
+        }
         self.0 ^= 1 << index;
     }
 
     pub fn populate_up(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
         let mut current_index = index + 8;
         for _ in 0..steps {
-            if current_index >= 64 || block_mask.get_bit(current_index) {
+            if current_index >= 64 {
                 break;
             }
             self.set_bit(current_index);
-            current_index += 8
+            if block_mask.get_bit(current_index) {
+                break;
+            }
+            current_index += 8;
         }
     }
 
     pub fn populate_down(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
-        let mut current_index = index - 8;
+        let mut current_index = index.wrapping_sub(8);
         for _ in 0..steps {
-            if current_index >= 64 || block_mask.get_bit(current_index) {
+            if current_index >= 64 {
                 break;
             }
             self.set_bit(current_index);
-            current_index -= 8
+            if block_mask.get_bit(current_index) {
+                break;
+            }
+            current_index = current_index.wrapping_sub(8);
         }
     }
 
     pub fn populate_left(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
-        let mut current_index = index - 1;
-        let bounded_steps = min(index % 8, steps);
-        for _ in 0..bounded_steps {
-            if block_mask.get_bit(current_index) {
+        let mut current_index = index.wrapping_sub(1);
+        for _ in 0..steps {
+            self.set_bit(current_index);
+            if block_mask.get_bit(current_index) || current_index % 8 == 0 {
                 break;
             }
-            self.set_bit(current_index);
-
-            current_index -= 1
+            current_index = current_index.wrapping_sub(1);
         }
     }
 
     pub fn populate_right(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
         let mut current_index = index + 1;
-        let bounded_steps = min(8 - (index % 8), steps);
-        for _ in 0..bounded_steps {
-            if block_mask.get_bit(current_index) {
+        for _ in 0..steps {
+            self.set_bit(current_index);
+            if block_mask.get_bit(current_index) || current_index % 8 == 7 {
+                break;
+            }
+            current_index += 1;
+        }
+    }
+
+    pub fn populate_up_right(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        let mut current_index = index + 9;
+        for _ in 0..steps {
+            if current_index >= 64 {
                 break;
             }
             self.set_bit(current_index);
-
-            current_index += 1
+            if block_mask.get_bit(current_index) || current_index % 8 == 7 {
+                break;
+            }
+            current_index += 9;
         }
+    }
+
+    pub fn populate_up_left(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        let mut current_index = index + 7;
+        for _ in 0..steps {
+            if current_index >= 64 {
+                break;
+            }
+            self.set_bit(current_index);
+            if block_mask.get_bit(current_index) || current_index % 8 == 0 {
+                break;
+            }
+            current_index += 7;
+        }
+    }
+
+    pub fn populate_down_right(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        let mut current_index = index.wrapping_sub(7);
+        for _ in 0..steps {
+            if current_index >= 64 {
+                break;
+            }
+            self.set_bit(current_index);
+            if block_mask.get_bit(current_index) || current_index % 8 == 7 {
+                break;
+            }
+            current_index = current_index.wrapping_sub(7);
+        }
+    }
+
+    pub fn populate_down_left(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        let mut current_index = index.wrapping_sub(9);
+        for _ in 0..steps {
+            if current_index >= 64 {
+                break;
+            }
+            self.set_bit(current_index);
+            if block_mask.get_bit(current_index) || current_index % 8 == 0 {
+                break;
+            }
+            current_index = current_index.wrapping_sub(9);
+        }
+    }
+
+    pub fn populate_vert_hor(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        self.populate_up(index, steps, block_mask);
+        self.populate_down(index, steps, block_mask);
+        self.populate_left(index, steps, block_mask);
+        self.populate_right(index, steps, block_mask);
+    }
+
+    pub fn populate_diag(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        self.populate_up_right(index, steps, block_mask);
+        self.populate_down_right(index, steps, block_mask);
+        self.populate_down_left(index, steps, block_mask);
+        self.populate_up_left(index, steps, block_mask);
+    }
+
+    pub fn populate_jump(&mut self, index: u8, row: i8, column: i8) {
+        let current_row = (index / 8) as i8;
+        let current_col = (index % 8) as i8;
+
+        let new_row = current_row + row;
+        let new_col = current_col + column;
+
+        if !(0..=7).contains(&new_row) || !(0..=7).contains(&new_col) {
+            return;
+        }
+
+        let new_index = ((new_row * 8) + new_col) as u8;
+        self.set_bit(new_index);
     }
 }
 
@@ -108,6 +207,27 @@ impl BitOr for BitBoard {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
         BitBoard(self.0 | rhs.0)
+    }
+}
+
+impl Display for BitBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let mut grid = String::new();
+        for row in (0..8).rev() {
+            for col in 0..8 {
+                let index = row * 8 + col;
+                if self.get_bit(index as u8) {
+                    grid.push('1');
+                } else {
+                    grid.push('0');
+                }
+                if col < 7 {
+                    grid.push(' ');
+                }
+            }
+            grid.push('\n');
+        }
+        write!(f, "{}", grid)
     }
 }
 

@@ -26,28 +26,46 @@ impl From<usize> for Piece {
 }
 
 impl Piece {
-    pub fn get_move_mask(
+    /// The reach mask will include the cell that the piece is blocked by
+    /// That way you can just subtract the current players color mask from the reach mask to get the move mask
+    /// Or AND the opponent color mask with the reach mask to get the attack mask (except pawns)
+    pub fn get_reach_mask(
         &self,
         index: u8,
         block_mask: BitBoard,
         initial_pawn_mask: BitBoard,
     ) -> BitBoard {
-        let mut move_mask = BitBoard::default();
+        let mut mask = BitBoard::default();
         match self {
             Piece::PAWN => {
                 if initial_pawn_mask.get_bit(index) {
-                    move_mask.populate_up(index, 2, block_mask);
+                    mask.populate_up(index, 2, block_mask);
                 } else {
-                    move_mask.populate_up(index, 1, block_mask)
+                    mask.populate_up(index, 1, block_mask);
                 }
             }
-            Piece::BISHOP => todo!(),
-            Piece::KNIGHT => todo!(),
-            Piece::ROOK => todo!(),
-            Piece::QUEEN => todo!(),
-            Piece::KING => todo!(),
-            Piece::NONE => todo!(),
+            Piece::BISHOP => mask.populate_diag(index, 7, block_mask),
+            Piece::KNIGHT => {
+                mask.populate_jump(index, 2, 1);
+                mask.populate_jump(index, 1, 2);
+                mask.populate_jump(index, 2, -1);
+                mask.populate_jump(index, 1, -2);
+                mask.populate_jump(index, -2, 1);
+                mask.populate_jump(index, -1, 2);
+                mask.populate_jump(index, -2, -1);
+                mask.populate_jump(index, -1, -2);
+            }
+            Piece::ROOK => mask.populate_vert_hor(index, 7, block_mask),
+            Piece::QUEEN => {
+                mask.populate_vert_hor(index, 7, block_mask);
+                mask.populate_diag(index, 7, block_mask);
+            }
+            Piece::KING => {
+                mask.populate_vert_hor(index, 1, block_mask);
+                mask.populate_diag(index, 1, block_mask);
+            }
+            Piece::NONE => {}
         }
-        move_mask
+        mask
     }
 }

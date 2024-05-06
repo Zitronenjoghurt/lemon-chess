@@ -5,6 +5,8 @@ use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::game::{bit_board::BitBoard, piece::Piece, position::Position};
+
 pub mod authentication;
 mod database;
 mod docs;
@@ -39,6 +41,14 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    // Testing piece reach masks
+    let board = Piece::KNIGHT.get_reach_mask(
+        Position::A1.into(),
+        BitBoard::default(),
+        BitBoard::default(),
+    );
+    let test = board.to_string();
+
     let db = database::setup().await.expect("Failed to set up MongoDB.");
 
     let app_state = AppState { database: db };
