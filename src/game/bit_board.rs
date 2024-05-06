@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::{
     fmt::{self, Display, Formatter},
-    ops::{BitAnd, BitOr},
+    ops::{BitAnd, BitOr, Not},
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash, Serialize)]
@@ -207,6 +207,14 @@ impl BitOr for BitBoard {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
         BitBoard(self.0 | rhs.0)
+    }
+}
+
+impl Not for BitBoard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        BitBoard(!self.0)
     }
 }
 

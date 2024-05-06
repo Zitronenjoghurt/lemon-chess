@@ -1,6 +1,8 @@
-use super::bit_board::BitBoard;
+use serde::Serialize;
 
-#[derive(Debug, PartialEq)]
+use super::{bit_board::BitBoard, color::Color};
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Piece {
     PAWN = 0,
     BISHOP = 1,
@@ -67,5 +69,58 @@ impl Piece {
             Piece::NONE => {}
         }
         mask
+    }
+
+    pub fn get_action_mask(
+        &self,
+        index: u8,
+        opponent_color: Color,
+        initial_pawn_mask: BitBoard,
+        color_masks: [BitBoard; 2],
+    ) -> BitBoard {
+        let (move_mask, attack_mask) =
+            self.get_move_and_attack_mask(index, opponent_color, initial_pawn_mask, color_masks);
+        move_mask | attack_mask
+    }
+
+    /// Calculating move and attack mask together prevents mutliple calculation of the reach mask
+    pub fn get_move_and_attack_mask(
+        &self,
+        index: u8,
+        opponent_color: Color,
+        initial_pawn_mask: BitBoard,
+        color_masks: [BitBoard; 2],
+    ) -> (BitBoard, BitBoard) {
+        let block_mask = color_masks[0] | color_masks[1];
+        let reach_mask = self.get_reach_mask(index, block_mask, initial_pawn_mask);
+        let move_mask = Self::get_move_mask(reach_mask, color_masks);
+        let attack_mask = Self::get_attack_mask(
+            index,
+            reach_mask,
+            self,
+            color_masks[opponent_color as usize],
+        );
+        (move_mask, attack_mask)
+    }
+
+    pub fn get_move_mask(reach_mask: BitBoard, color_masks: [BitBoard; 2]) -> BitBoard {
+        // Subtract all player pieces from the reach mask
+        reach_mask & !color_masks[0] & !color_masks[1]
+    }
+
+    pub fn get_attack_mask(
+        index: u8,
+        reach_mask: BitBoard,
+        piece: &Piece,
+        opponent_mask: BitBoard,
+    ) -> BitBoard {
+        if piece == &Piece::PAWN {
+            let mut mask = BitBoard::default();
+            mask.populate_up_left(index, 1, BitBoard::default());
+            mask.populate_up_right(index, 1, BitBoard::default());
+            mask & opponent_mask
+        } else {
+            reach_mask & opponent_mask
+        }
     }
 }

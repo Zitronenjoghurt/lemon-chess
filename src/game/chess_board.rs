@@ -29,6 +29,10 @@ impl Default for ChessBoard {
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Clone, Debug, Default, Hash, Serialize)]
+/// Describes all available moves with a location index and a vector of target indices
+pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
+
 impl ChessBoard {
     pub fn validate_index(index: u8) -> Result<(), GameError> {
         if index >= 64 {
@@ -142,11 +146,27 @@ impl ChessBoard {
         Ok(true)
     }
 
-    /*
-    pub fn generate_legal_moves(&self, color: Color) -> Result<Vec<(u8, u8)>, GameError> {
+    pub fn generate_legal_moves(
+        &self,
+        color: Color,
+        initial_pawn_mask: BitBoard,
+    ) -> Result<AvailableMoves, GameError> {
         let piece_indizes = self.colors[color as usize].get_bits();
+        let mut piece_moves: Vec<(u8, Vec<u8>)> = Vec::new();
+
+        for index in piece_indizes {
+            let piece = self.piece_at_cell(index)?;
+            let action_mask = piece.get_action_mask(
+                index,
+                color.opponent_color(),
+                initial_pawn_mask,
+                self.colors,
+            );
+            piece_moves.push((index, action_mask.get_bits()))
+        }
+
+        Ok(AvailableMoves(piece_moves))
     }
-    */
 }
 
 #[cfg(test)]
