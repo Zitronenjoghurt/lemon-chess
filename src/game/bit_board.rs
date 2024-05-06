@@ -4,7 +4,7 @@ use crate::game::error::GameError;
 pub struct BitBoard(pub u64);
 
 impl BitBoard {
-    pub fn validate_index(index: u64) -> Result<(), GameError> {
+    pub fn validate_index(index: u8) -> Result<(), GameError> {
         if index >= 64 {
             return Err(GameError::ValidationError(
                 "Board address out of range.".to_string(),
@@ -13,24 +13,37 @@ impl BitBoard {
         Ok(())
     }
 
-    pub fn get_bit(&self, index: u64) -> Result<bool, GameError> {
+    pub fn get_bit(&self, index: u8) -> Result<bool, GameError> {
         Self::validate_index(index)?;
         Ok((self.0 & (1 << index)) != 0)
     }
 
-    pub fn set_bit(&mut self, index: u64) -> Result<(), GameError> {
+    /// Returns the indizes of all 1's
+    pub fn get_bits(&self) -> Vec<u8> {
+        let mut result: Vec<u8> = Vec::new();
+
+        for i in 0..64 {
+            if (self.0 & (1 << i)) != 0 {
+                result.push(i);
+            }
+        }
+
+        result
+    }
+
+    pub fn set_bit(&mut self, index: u8) -> Result<(), GameError> {
         Self::validate_index(index)?;
         self.0 |= 1 << index;
         Ok(())
     }
 
-    pub fn clear_bit(&mut self, index: u64) -> Result<(), GameError> {
+    pub fn clear_bit(&mut self, index: u8) -> Result<(), GameError> {
         Self::validate_index(index)?;
         self.0 &= !(1 << index);
         Ok(())
     }
 
-    pub fn flip_bit(&mut self, index: u64) -> Result<(), GameError> {
+    pub fn flip_bit(&mut self, index: u8) -> Result<(), GameError> {
         Self::validate_index(index)?;
         self.0 ^= 1 << index;
         Ok(())
