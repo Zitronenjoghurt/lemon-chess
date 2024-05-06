@@ -17,8 +17,9 @@ pub mod entities {
 pub mod game {
     pub mod bit_board;
     pub mod chess_board;
-    pub mod enums;
+    pub mod color;
     pub mod error;
+    pub mod piece;
     pub mod position;
 }
 

@@ -67,8 +67,8 @@ pub enum Position {
     H8,
 }
 
-impl From<Position> for u64 {
+impl From<Position> for u8 {
     fn from(val: Position) -> Self {
-        val as u64
+        val as u8
     }
 }

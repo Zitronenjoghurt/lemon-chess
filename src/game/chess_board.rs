@@ -1,8 +1,4 @@
-use crate::game::{
-    bit_board::BitBoard,
-    enums::{Color, Piece},
-    error::GameError,
-};
+use crate::game::{bit_board::BitBoard, color::Color, error::GameError, piece::Piece};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -71,13 +67,13 @@ impl ChessBoard {
         Ok(ChessBoard { colors, pieces })
     }
 
-    pub fn is_cell_occupied(&self, index: u64) -> Result<bool, GameError> {
+    pub fn is_cell_occupied(&self, index: u8) -> Result<bool, GameError> {
         let occupied_by_black = self.colors[0].get_bit(index)?;
         let occupied_by_white = self.colors[1].get_bit(index)?;
         Ok(occupied_by_black || occupied_by_white)
     }
 
-    pub fn piece_at_cell(&self, index: u64) -> Result<Piece, GameError> {
+    pub fn piece_at_cell(&self, index: u8) -> Result<Piece, GameError> {
         for piece_id in 0..6 {
             if self.pieces[piece_id].get_bit(index)? {
                 return Ok(Piece::from(piece_id));
@@ -87,7 +83,7 @@ impl ChessBoard {
         Ok(Piece::NONE)
     }
 
-    pub fn color_at_cell(&self, index: u64) -> Result<Color, GameError> {
+    pub fn color_at_cell(&self, index: u8) -> Result<Color, GameError> {
         for color_id in 0..2 {
             if self.colors[color_id].get_bit(index)? {
                 return Ok(Color::from(color_id));
@@ -97,13 +93,13 @@ impl ChessBoard {
         Ok(Color::NONE)
     }
 
-    pub fn piece_and_color_at_cell(&self, index: u64) -> Result<(Piece, Color), GameError> {
+    pub fn piece_and_color_at_cell(&self, index: u8) -> Result<(Piece, Color), GameError> {
         let piece = Self::piece_at_cell(self, index)?;
         let color = Self::color_at_cell(self, index)?;
         Ok((piece, color))
     }
 
-    pub fn make_move(&mut self, from: u64, to: u64) -> Result<bool, GameError> {
+    pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
         let piece = Self::piece_at_cell(self, from)?;
         if piece == Piece::NONE {
             return Ok(false);
@@ -125,6 +121,12 @@ impl ChessBoard {
 
         Ok(true)
     }
+
+    /*
+    pub fn generate_legal_moves(&self, color: Color) -> Result<Vec<(u8, u8)>, GameError> {
+        let piece_indizes = self.colors[color as usize].get_bits();
+    }
+    */
 }
 
 #[cfg(test)]
