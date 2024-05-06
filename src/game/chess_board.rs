@@ -1,10 +1,11 @@
 use crate::game::{bit_board::BitBoard, color::Color, error::GameError, piece::Piece};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use serde::Serialize;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize)]
 pub struct ChessBoard {
-    colors: [BitBoard; 2],
-    pieces: [BitBoard; 6],
+    pub colors: [BitBoard; 2],
+    pub pieces: [BitBoard; 6],
 }
 
 // Representation can later be individualized by rotating the board

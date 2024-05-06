@@ -21,6 +21,7 @@ pub mod game {
     pub mod error;
     pub mod piece;
     pub mod position;
+    pub mod state;
 }
 
 pub mod models {

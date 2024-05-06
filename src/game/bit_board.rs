@@ -1,6 +1,8 @@
 use crate::game::error::GameError;
+use serde::Serialize;
+use std::ops::{BitAnd, BitOr};
 
-#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash, Serialize)]
 pub struct BitBoard(pub u64);
 
 impl BitBoard {
@@ -47,6 +49,20 @@ impl BitBoard {
         Self::validate_index(index)?;
         self.0 ^= 1 << index;
         Ok(())
+    }
+}
+
+impl BitAnd for BitBoard {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 & rhs.0)
+    }
+}
+
+impl BitOr for BitBoard {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        BitBoard(self.0 | rhs.0)
     }
 }
 
