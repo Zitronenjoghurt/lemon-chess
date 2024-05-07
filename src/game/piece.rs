@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use super::{bit_board::BitBoard, color::Color};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -34,16 +32,22 @@ impl Piece {
     pub fn get_reach_mask(
         &self,
         index: u8,
+        current_color: Color,
         block_mask: BitBoard,
         initial_pawn_mask: BitBoard,
     ) -> BitBoard {
         let mut mask = BitBoard::default();
         match self {
             Piece::PAWN => {
-                if initial_pawn_mask.get_bit(index) {
-                    mask.populate_up(index, 2, block_mask);
+                let steps = if initial_pawn_mask.get_bit(index) {
+                    2
                 } else {
-                    mask.populate_up(index, 1, block_mask);
+                    1
+                };
+                if current_color == Color::WHITE {
+                    mask.populate_up(index, steps, block_mask);
+                } else {
+                    mask.populate_down(index, steps, block_mask)
                 }
             }
             Piece::BISHOP => mask.populate_diag(index, 7, block_mask),
@@ -74,12 +78,18 @@ impl Piece {
     pub fn get_action_mask(
         &self,
         index: u8,
-        opponent_color: Color,
+        current_color: Color,
         initial_pawn_mask: BitBoard,
         color_masks: [BitBoard; 2],
+        en_passant_indices: &[u8; 2],
     ) -> BitBoard {
-        let (move_mask, attack_mask) =
-            self.get_move_and_attack_mask(index, opponent_color, initial_pawn_mask, color_masks);
+        let (move_mask, attack_mask) = self.get_move_and_attack_mask(
+            index,
+            current_color,
+            initial_pawn_mask,
+            color_masks,
+            en_passant_indices,
+        );
         move_mask | attack_mask
     }
 
@@ -87,18 +97,21 @@ impl Piece {
     pub fn get_move_and_attack_mask(
         &self,
         index: u8,
-        opponent_color: Color,
+        current_color: Color,
         initial_pawn_mask: BitBoard,
         color_masks: [BitBoard; 2],
+        en_passant_indices: &[u8; 2],
     ) -> (BitBoard, BitBoard) {
         let block_mask = color_masks[0] | color_masks[1];
-        let reach_mask = self.get_reach_mask(index, block_mask, initial_pawn_mask);
+        let reach_mask = self.get_reach_mask(index, current_color, block_mask, initial_pawn_mask);
         let move_mask = Self::get_move_mask(reach_mask, color_masks);
         let attack_mask = Self::get_attack_mask(
             index,
             reach_mask,
             self,
-            color_masks[opponent_color as usize],
+            current_color,
+            color_masks[current_color.opponent_color() as usize],
+            en_passant_indices[current_color.opponent_color() as usize],
         );
         (move_mask, attack_mask)
     }
@@ -112,26 +125,46 @@ impl Piece {
         index: u8,
         reach_mask: BitBoard,
         piece: &Piece,
+        current_color: Color,
         opponent_mask: BitBoard,
+        en_passant_index: u8,
     ) -> BitBoard {
         if piece == &Piece::PAWN {
             let mut mask = BitBoard::default();
-            mask.populate_up_left(index, 1, BitBoard::default());
-            mask.populate_up_right(index, 1, BitBoard::default());
-            mask & opponent_mask
+            if current_color == Color::WHITE {
+                mask.populate_up_left(index, 1, BitBoard::default());
+                mask.populate_up_right(index, 1, BitBoard::default());
+            } else {
+                mask.populate_down_left(index, 1, BitBoard::default());
+                mask.populate_down_right(index, 1, BitBoard::default());
+            }
+
+            mask & (opponent_mask + en_passant_index)
         } else {
             reach_mask & opponent_mask
         }
     }
 
     // If a respective opponent piece is at a 1 position, it means the king is check
-    pub fn get_king_threat_masks(index: u8, block_mask: BitBoard) -> [BitBoard; 6] {
+    pub fn get_king_threat_masks(
+        index: u8,
+        current_color: Color,
+        block_mask: BitBoard,
+    ) -> [BitBoard; 6] {
         let mut masks: [BitBoard; 6] = [BitBoard::default(); 6];
 
         for piece_id in 0..6 {
             let piece = Piece::from(piece_id);
-            let reach_mask = piece.get_reach_mask(index, block_mask, BitBoard::default());
-            let threat_mask = Piece::get_attack_mask(index, reach_mask, &piece, BitBoard(u64::MAX));
+            let reach_mask =
+                piece.get_reach_mask(index, current_color, block_mask, BitBoard::default());
+            let threat_mask = Piece::get_attack_mask(
+                index,
+                reach_mask,
+                &piece,
+                current_color,
+                BitBoard(u64::MAX),
+                64,
+            );
             masks[piece_id] = threat_mask;
         }
 

@@ -1,15 +1,15 @@
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Color {
-    BLACK = 0,
-    WHITE = 1,
+    WHITE = 0,
+    BLACK = 1,
     NONE = 2,
 }
 
 impl From<usize> for Color {
     fn from(number: usize) -> Self {
         match number {
-            0 => Color::BLACK,
-            1 => Color::WHITE,
+            0 => Color::WHITE,
+            1 => Color::BLACK,
             _ => Color::NONE,
         }
     }

@@ -14,6 +14,8 @@ pub struct GameState {
     available_moves: [AvailableMoves; 2],
     /// Check state by color
     check_states: [bool; 2],
+    /// The fields of en passant by color, 64 being the NONE state
+    en_passant_indices: [u8; 2],
 }
 
 impl GameState {
@@ -30,6 +32,7 @@ impl GameState {
             occupancy_mask: Default::default(),
             available_moves: Default::default(),
             check_states: [false, false],
+            en_passant_indices: [64, 64],
         };
 
         game_state.update()?;
@@ -38,7 +41,9 @@ impl GameState {
     }
 
     pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
-        let success = self.chess_board.make_move(from, to)?;
+        let success = self
+            .chess_board
+            .make_move(from, to, &mut self.en_passant_indices)?;
         if !success {
             return Ok(false);
         }
@@ -64,14 +69,17 @@ impl GameState {
         self.check_states[Color::WHITE as usize] = self.chess_board.is_king_check(Color::WHITE);
     }
 
-    pub fn get_legal_moves(&self, color: Color) -> Result<AvailableMoves, GameError> {
-        self.chess_board
-            .generate_legal_moves(color, self.initial_pawn_masks[color as usize])
+    pub fn get_legal_moves(&mut self, color: Color) -> Result<AvailableMoves, GameError> {
+        self.chess_board.generate_legal_moves(
+            color,
+            self.initial_pawn_masks[color as usize],
+            &self.en_passant_indices,
+        )
     }
 
     pub fn update_legal_moves(&mut self) -> Result<(), GameError> {
-        self.available_moves[0] = self.get_legal_moves(Color::BLACK)?;
-        self.available_moves[1] = self.get_legal_moves(Color::WHITE)?;
+        self.available_moves[0] = self.get_legal_moves(Color::WHITE)?;
+        self.available_moves[1] = self.get_legal_moves(Color::BLACK)?;
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::{
     fmt::{self, Display, Formatter},
-    ops::{BitAnd, BitOr, Not},
+    ops::{Add, BitAnd, BitOr, Not},
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash, Serialize)]
@@ -215,6 +215,16 @@ impl Not for BitBoard {
 
     fn not(self) -> Self::Output {
         BitBoard(!self.0)
+    }
+}
+
+impl Add<u8> for BitBoard {
+    type Output = BitBoard;
+
+    fn add(self, index: u8) -> Self::Output {
+        let mut board = self;
+        board.set_bit(index);
+        board
     }
 }
 

@@ -83,8 +83,8 @@ impl ChessBoard {
 
     pub fn is_cell_occupied(&self, index: u8) -> Result<bool, GameError> {
         Self::validate_index(index)?;
-        let occupied_by_black = self.colors[0].get_bit(index);
-        let occupied_by_white = self.colors[1].get_bit(index);
+        let occupied_by_white = self.colors[0].get_bit(index);
+        let occupied_by_black = self.colors[1].get_bit(index);
         Ok(occupied_by_black || occupied_by_white)
     }
 
@@ -120,7 +120,12 @@ impl ChessBoard {
         self.pieces[piece as usize] & self.colors[color as usize]
     }
 
-    pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
+    pub fn make_move(
+        &mut self,
+        from: u8,
+        to: u8,
+        en_passant_indices: &mut [u8; 2],
+    ) -> Result<bool, GameError> {
         Self::validate_index(from)?;
         Self::validate_index(to)?;
 
@@ -146,6 +151,30 @@ impl ChessBoard {
         self.colors[color_index].clear_bit(from);
         self.colors[color_index].set_bit(to);
 
+        // Capture en-passant
+        let opponent_color = source_color.opponent_color();
+        if source_piece == Piece::PAWN && to == en_passant_indices[opponent_color as usize] {
+            let captured_pawn_index = match opponent_color {
+                Color::BLACK => to - 8,
+                Color::WHITE => to + 8,
+                Color::NONE => to + 8,
+            };
+            self.pieces[Piece::PAWN as usize].clear_bit(captured_pawn_index);
+            self.colors[opponent_color as usize].clear_bit(captured_pawn_index);
+            en_passant_indices[opponent_color as usize] = 64;
+        }
+
+        // Update en-passant
+        if source_piece == Piece::PAWN && to.abs_diff(from) == 16 {
+            en_passant_indices[source_color as usize] = match source_color {
+                Color::BLACK => to + 8,
+                Color::WHITE => to - 8,
+                Color::NONE => to - 8,
+            }
+        } else {
+            en_passant_indices[source_color as usize] = 64;
+        }
+
         Ok(true)
     }
 
@@ -153,6 +182,7 @@ impl ChessBoard {
         &self,
         color: Color,
         initial_pawn_mask: BitBoard,
+        en_passant_indices: &[u8; 2],
     ) -> Result<AvailableMoves, GameError> {
         let piece_indices = self.colors[color as usize].get_bits();
         let mut piece_moves: Vec<(u8, Vec<u8>)> = Vec::new();
@@ -161,15 +191,22 @@ impl ChessBoard {
             let piece = self.piece_at_cell(index)?;
             let action_mask = piece.get_action_mask(
                 index,
-                color.opponent_color(),
+                color,
                 initial_pawn_mask,
                 self.colors,
+                en_passant_indices,
             );
 
             let target_indices = action_mask.get_bits();
             let mut valid_targets: Vec<u8> = Vec::new();
             for target_index in target_indices {
-                if !Self::does_move_lead_to_check(self, color, index, target_index) {
+                if !Self::does_move_lead_to_check(
+                    self,
+                    color,
+                    index,
+                    target_index,
+                    en_passant_indices,
+                ) {
                     valid_targets.push(target_index)
                 }
             }
@@ -180,9 +217,16 @@ impl ChessBoard {
     }
 
     /// If a move leads to your own king being in check
-    pub fn does_move_lead_to_check(&self, color: Color, from: u8, to: u8) -> bool {
+    pub fn does_move_lead_to_check(
+        &self,
+        color: Color,
+        from: u8,
+        to: u8,
+        en_passant_indices: &[u8; 2],
+    ) -> bool {
         let mut future_board = self.clone();
-        if let Ok(success) = future_board.make_move(from, to) {
+        let mut future_en_passant_indices = *en_passant_indices;
+        if let Ok(success) = future_board.make_move(from, to, &mut future_en_passant_indices) {
             if success {
                 return future_board.is_king_check(color);
             }
@@ -198,7 +242,7 @@ impl ChessBoard {
         }
         let king_index = king_positions[0];
         let block_mask = self.colors[0] | self.colors[1];
-        let threat_masks = Piece::get_king_threat_masks(king_index, block_mask);
+        let threat_masks = Piece::get_king_threat_masks(king_index, color, block_mask);
 
         let mut check_positions: Vec<u8> = Vec::new();
         for i in 0..6 {
@@ -271,8 +315,12 @@ mod tests {
     #[test]
     fn test_make_move() {
         let mut board = ChessBoard::default();
-        assert!(board.make_move(Pos::H2.into(), Pos::H3.into()).unwrap());
-        assert!(!board.make_move(Pos::H2.into(), Pos::H3.into()).unwrap());
+        assert!(board
+            .make_move(Pos::H2.into(), Pos::H3.into(), &mut [64, 64])
+            .unwrap());
+        assert!(!board
+            .make_move(Pos::H2.into(), Pos::H3.into(), &mut [64, 64])
+            .unwrap());
         assert_eq!(board.piece_at_cell(Pos::H2.into()).unwrap(), Piece::NONE);
         assert_eq!(board.piece_at_cell(Pos::H3.into()).unwrap(), Piece::PAWN);
     }
