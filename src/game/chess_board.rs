@@ -166,6 +166,31 @@ impl ChessBoard {
         }
 
         Ok(AvailableMoves(piece_moves))
+
+        // ToDo: Filter out moves which lead to check, if in check only allow moves which bring you out of check
+    }
+
+    pub fn get_king_check_positions(&self, color: Color) -> Vec<u8> {
+        let king_board = Self::mask_by_piece_and_color(self, Piece::KING, color);
+        let king_positions = king_board.get_bits();
+        if king_positions.is_empty() {
+            return Vec::new();
+        }
+        let king_index = king_positions[0];
+        let block_mask = self.colors[0] | self.colors[1];
+        let threat_masks = Piece::get_king_threat_masks(king_index, block_mask);
+
+        let mut check_positions: Vec<u8> = Vec::new();
+        for i in 0..6 {
+            let threats =
+                threat_masks[i] & self.pieces[i] & self.colors[color.opponent_color() as usize];
+            check_positions.extend(threats.get_bits());
+        }
+        check_positions
+    }
+
+    pub fn is_king_check(&self, color: Color) -> bool {
+        !self.get_king_check_positions(color).is_empty()
     }
 }
 

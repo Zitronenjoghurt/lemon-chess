@@ -6,7 +6,8 @@ use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::game::{
-    bit_board::BitBoard, color::Color, piece::Piece, position::Position, state::GameState,
+    bit_board::BitBoard, chess_board::ChessBoard, color::Color, piece::Piece, position::Position,
+    state::GameState,
 };
 
 pub mod authentication;
@@ -44,8 +45,13 @@ pub struct AppState {
 #[tokio::main]
 async fn main() -> io::Result<()> {
     // Testing legal move generation
-    let state = GameState::new().unwrap();
-    let moves = state.get_legal_moves(Color::BLACK);
+    //let state = GameState::new().unwrap();
+    //let moves = state.get_legal_moves(Color::BLACK);
+    let chess_board = ChessBoard::default();
+    let test: Vec<String> = Piece::get_king_threat_masks(5, chess_board.colors[0])
+        .iter()
+        .map(|board| board.to_string())
+        .collect();
 
     let db = database::setup().await.expect("Failed to set up MongoDB.");
 

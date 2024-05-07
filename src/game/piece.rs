@@ -123,4 +123,16 @@ impl Piece {
             reach_mask & opponent_mask
         }
     }
+
+    // If a respective opponent piece is at a 1 position, it means the king is check
+    pub fn get_king_threat_masks(index: u8, block_mask: BitBoard) -> Vec<BitBoard> {
+        let mut masks: Vec<BitBoard> = Vec::new();
+        for piece_id in 0..6 {
+            let piece = Piece::from(piece_id);
+            let reach_mask = piece.get_reach_mask(index, block_mask, BitBoard::default());
+            let threat_mask = Piece::get_attack_mask(index, reach_mask, &piece, BitBoard(u64::MAX));
+            masks.push(threat_mask);
+        }
+        masks
+    }
 }
