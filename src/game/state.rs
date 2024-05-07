@@ -12,6 +12,8 @@ pub struct GameState {
     initial_pawn_masks: [BitBoard; 2],
     /// All available moves (also by color)
     available_moves: [AvailableMoves; 2],
+    /// Check state by color
+    check_states: [bool; 2],
 }
 
 impl GameState {
@@ -27,6 +29,7 @@ impl GameState {
             chess_board: board,
             occupancy_mask: Default::default(),
             available_moves: Default::default(),
+            check_states: [false, false],
         };
 
         game_state.update()?;
@@ -47,12 +50,18 @@ impl GameState {
 
     pub fn update(&mut self) -> Result<(), GameError> {
         self.update_occupancy_mask();
+        self.update_check_states();
         self.update_legal_moves()?;
         Ok(())
     }
 
     pub fn update_occupancy_mask(&mut self) {
         self.occupancy_mask = self.chess_board.colors[0] | self.chess_board.colors[1];
+    }
+
+    pub fn update_check_states(&mut self) {
+        self.check_states[Color::BLACK as usize] = self.chess_board.is_king_check(Color::BLACK);
+        self.check_states[Color::WHITE as usize] = self.chess_board.is_king_check(Color::WHITE);
     }
 
     pub fn get_legal_moves(&self, color: Color) -> Result<AvailableMoves, GameError> {

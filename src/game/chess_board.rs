@@ -124,24 +124,27 @@ impl ChessBoard {
         Self::validate_index(from)?;
         Self::validate_index(to)?;
 
-        let piece = Self::piece_at_cell(self, from)?;
-        if piece == Piece::NONE {
+        let (source_piece, source_color) = Self::piece_and_color_at_cell(self, from)?;
+        let (target_piece, target_color) = Self::piece_and_color_at_cell(self, to)?;
+        if source_piece == Piece::NONE || target_color == source_color {
             return Ok(false);
         }
 
+        // Capture piece
+        if target_piece != Piece::NONE {
+            self.pieces[target_piece as usize].clear_bit(to);
+            self.colors[target_color as usize].clear_bit(to);
+        }
+
         // Update piece
-        let piece_index = piece as usize;
+        let piece_index = source_piece as usize;
         self.pieces[piece_index].clear_bit(from);
         self.pieces[piece_index].set_bit(to);
 
         // Update color
-        if self.colors[0].get_bit(from) {
-            self.colors[0].clear_bit(from);
-            self.colors[0].set_bit(to);
-        } else {
-            self.colors[1].clear_bit(from);
-            self.colors[1].set_bit(to);
-        }
+        let color_index = source_color as usize;
+        self.colors[color_index].clear_bit(from);
+        self.colors[color_index].set_bit(to);
 
         Ok(true)
     }
@@ -151,10 +154,10 @@ impl ChessBoard {
         color: Color,
         initial_pawn_mask: BitBoard,
     ) -> Result<AvailableMoves, GameError> {
-        let piece_indizes = self.colors[color as usize].get_bits();
+        let piece_indices = self.colors[color as usize].get_bits();
         let mut piece_moves: Vec<(u8, Vec<u8>)> = Vec::new();
 
-        for index in piece_indizes {
+        for index in piece_indices {
             let piece = self.piece_at_cell(index)?;
             let action_mask = piece.get_action_mask(
                 index,
@@ -162,12 +165,29 @@ impl ChessBoard {
                 initial_pawn_mask,
                 self.colors,
             );
-            piece_moves.push((index, action_mask.get_bits()))
+
+            let target_indices = action_mask.get_bits();
+            let mut valid_targets: Vec<u8> = Vec::new();
+            for target_index in target_indices {
+                if !Self::does_move_lead_to_check(self, color, index, target_index) {
+                    valid_targets.push(target_index)
+                }
+            }
+            piece_moves.push((index, valid_targets))
         }
 
         Ok(AvailableMoves(piece_moves))
+    }
 
-        // ToDo: Filter out moves which lead to check, if in check only allow moves which bring you out of check
+    /// If a move leads to your own king being in check
+    pub fn does_move_lead_to_check(&self, color: Color, from: u8, to: u8) -> bool {
+        let mut future_board = self.clone();
+        if let Ok(success) = future_board.make_move(from, to) {
+            if success {
+                return future_board.is_king_check(color);
+            }
+        }
+        false
     }
 
     pub fn get_king_check_positions(&self, color: Color) -> Vec<u8> {
