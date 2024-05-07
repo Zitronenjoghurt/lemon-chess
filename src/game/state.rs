@@ -16,6 +16,9 @@ pub struct GameState {
     check_states: [bool; 2],
     /// The fields of en passant by color, 64 being the NONE state
     en_passant_indices: [u8; 2],
+    /// Castle rights by color
+    kingside_castling_rights: [bool; 2],
+    queenside_castling_rights: [bool; 2],
 }
 
 impl GameState {
@@ -33,6 +36,8 @@ impl GameState {
             available_moves: Default::default(),
             check_states: [false, false],
             en_passant_indices: [64, 64],
+            kingside_castling_rights: [true, true],
+            queenside_castling_rights: [true, true],
         };
 
         game_state.update()?;
@@ -41,9 +46,13 @@ impl GameState {
     }
 
     pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
-        let success = self
-            .chess_board
-            .make_move(from, to, &mut self.en_passant_indices)?;
+        let success = self.chess_board.make_move(
+            from,
+            to,
+            &mut self.en_passant_indices,
+            &mut self.kingside_castling_rights,
+            &mut self.queenside_castling_rights,
+        )?;
         if !success {
             return Ok(false);
         }
@@ -74,6 +83,8 @@ impl GameState {
             color,
             self.initial_pawn_masks[color as usize],
             &self.en_passant_indices,
+            &self.kingside_castling_rights,
+            &self.queenside_castling_rights,
         )
     }
 

@@ -125,6 +125,8 @@ impl ChessBoard {
         from: u8,
         to: u8,
         en_passant_indices: &mut [u8; 2],
+        kingside_castling_rights: &mut [bool; 2],
+        queenside_castling_rights: &mut [bool; 2],
     ) -> Result<bool, GameError> {
         Self::validate_index(from)?;
         Self::validate_index(to)?;
@@ -175,6 +177,29 @@ impl ChessBoard {
             en_passant_indices[source_color as usize] = 64;
         }
 
+        // Update kingside castling rights
+        if kingside_castling_rights[color_index] {
+            // King has moved, castling rights removed
+            if source_piece == Piece::KING {
+                kingside_castling_rights[color_index] = false;
+                queenside_castling_rights[color_index] = false;
+            } else if source_piece == Piece::ROOK {
+                let king_index = self.get_king_position_by_color(source_color);
+                // rook is kingside
+                if from > king_index {
+                    kingside_castling_rights[color_index] = false;
+                }
+            }
+        }
+
+        // Update queenside castling rights
+        if queenside_castling_rights[color_index] && source_piece == Piece::ROOK {
+            let king_index = self.get_king_position_by_color(source_color);
+            if from < king_index {
+                queenside_castling_rights[color_index] = false;
+            }
+        }
+
         Ok(true)
     }
 
@@ -183,6 +208,8 @@ impl ChessBoard {
         color: Color,
         initial_pawn_mask: BitBoard,
         en_passant_indices: &[u8; 2],
+        kingside_castling_rights: &[bool; 2],
+        queenside_castling_rights: &[bool; 2],
     ) -> Result<AvailableMoves, GameError> {
         let piece_indices = self.colors[color as usize].get_bits();
         let mut piece_moves: Vec<(u8, Vec<u8>)> = Vec::new();
@@ -206,6 +233,8 @@ impl ChessBoard {
                     index,
                     target_index,
                     en_passant_indices,
+                    kingside_castling_rights,
+                    queenside_castling_rights,
                 ) {
                     valid_targets.push(target_index)
                 }
@@ -223,10 +252,20 @@ impl ChessBoard {
         from: u8,
         to: u8,
         en_passant_indices: &[u8; 2],
+        kingside_castling_rights: &[bool; 2],
+        queenside_castling_rights: &[bool; 2],
     ) -> bool {
         let mut future_board = self.clone();
         let mut future_en_passant_indices = *en_passant_indices;
-        if let Ok(success) = future_board.make_move(from, to, &mut future_en_passant_indices) {
+        let mut future_kingside_castling_rights = *kingside_castling_rights;
+        let mut future_queenside_castling_rights = *queenside_castling_rights;
+        if let Ok(success) = future_board.make_move(
+            from,
+            to,
+            &mut future_en_passant_indices,
+            &mut future_kingside_castling_rights,
+            &mut future_queenside_castling_rights,
+        ) {
             if success {
                 return future_board.is_king_check(color);
             }
@@ -234,13 +273,17 @@ impl ChessBoard {
         false
     }
 
-    pub fn get_king_check_positions(&self, color: Color) -> Vec<u8> {
+    pub fn get_king_position_by_color(&self, color: Color) -> u8 {
         let king_board = Self::mask_by_piece_and_color(self, Piece::KING, color);
         let king_positions = king_board.get_bits();
         if king_positions.is_empty() {
-            return Vec::new();
+            return 0; // undefined behavior
         }
-        let king_index = king_positions[0];
+        king_positions[0]
+    }
+
+    pub fn get_king_check_positions(&self, color: Color) -> Vec<u8> {
+        let king_index = self.get_king_position_by_color(color);
         let block_mask = self.colors[0] | self.colors[1];
         let threat_masks = Piece::get_king_threat_masks(king_index, color, block_mask);
 
@@ -316,10 +359,22 @@ mod tests {
     fn test_make_move() {
         let mut board = ChessBoard::default();
         assert!(board
-            .make_move(Pos::H2.into(), Pos::H3.into(), &mut [64, 64])
+            .make_move(
+                Pos::H2.into(),
+                Pos::H3.into(),
+                &mut [64, 64],
+                &mut [true, true],
+                &mut [true, true]
+            )
             .unwrap());
         assert!(!board
-            .make_move(Pos::H2.into(), Pos::H3.into(), &mut [64, 64])
+            .make_move(
+                Pos::H2.into(),
+                Pos::H3.into(),
+                &mut [64, 64],
+                &mut [true, true],
+                &mut [true, true]
+            )
             .unwrap());
         assert_eq!(board.piece_at_cell(Pos::H2.into()).unwrap(), Piece::NONE);
         assert_eq!(board.piece_at_cell(Pos::H3.into()).unwrap(), Piece::PAWN);
