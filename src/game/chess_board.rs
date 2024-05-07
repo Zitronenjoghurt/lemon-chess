@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use crate::game::{bit_board::BitBoard, color::Color, error::GameError, piece::Piece};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
@@ -298,6 +300,87 @@ impl ChessBoard {
 
     pub fn is_king_check(&self, color: Color) -> bool {
         !self.get_king_check_positions(color).is_empty()
+    }
+
+    pub fn get_attack_mask_by_color(&self, color: Color) -> BitBoard {
+        let block_mask = self.colors[0] | self.colors[1];
+        let mut final_mask = BitBoard::default();
+        for piece_id in 0..6 {
+            let piece = Piece::from(piece_id);
+            let piece_indices = (self.pieces[piece_id] & self.colors[color as usize]).get_bits();
+            for piece_index in piece_indices {
+                let reach_mask =
+                    piece.get_reach_mask(piece_index, color, block_mask, BitBoard::default());
+                let full_attack_mask = Piece::get_attack_mask(
+                    piece_index,
+                    reach_mask,
+                    &piece,
+                    color,
+                    BitBoard(u64::MAX),
+                    64,
+                );
+                final_mask = final_mask | full_attack_mask;
+            }
+        }
+        final_mask
+    }
+
+    pub fn can_castle_kingside(&self, color: Color) -> bool {
+        let king_index = self.get_king_position_by_color(color);
+        let rook_board = self.pieces[Piece::ROOK as usize] & self.colors[color as usize];
+        let rook_indices = rook_board.get_bits();
+        let rook_index = match rook_indices.iter().max() {
+            Some(index) => index,
+            None => {
+                return false;
+            }
+        };
+        // rook is not kingside
+        if king_index > *rook_index {
+            return false;
+        }
+
+        self.can_castle_common(color, &king_index, *rook_index)
+    }
+
+    pub fn can_castle_queenside(&self, color: Color) -> bool {
+        let king_index = self.get_king_position_by_color(color);
+        let rook_board = self.pieces[Piece::ROOK as usize] & self.colors[color as usize];
+        let rook_indices = rook_board.get_bits();
+        let rook_index = match rook_indices.iter().min() {
+            Some(index) => index,
+            None => {
+                return false;
+            }
+        };
+        // rook is not queenside
+        if king_index < *rook_index {
+            return false;
+        }
+
+        self.can_castle_common(color, &king_index, *rook_index)
+    }
+
+    pub fn can_castle_common(&self, color: Color, king_index: &u8, rook_index: u8) -> bool {
+        let block_mask = self.colors[0] | self.colors[1];
+        let rook_reach_mask =
+            Piece::ROOK.get_reach_mask(rook_index, color, block_mask, BitBoard::default());
+        let rook_influence_cells = rook_reach_mask.get_bits();
+
+        // Rook cant reach king
+        if !rook_influence_cells.contains(king_index) {
+            return false;
+        }
+
+        let opponent_attack_mask = self.get_attack_mask_by_color(color.opponent_color());
+        let opponent_attack_indices = opponent_attack_mask.get_bits();
+        for cell in rook_influence_cells {
+            if opponent_attack_indices.contains(&cell) {
+                return false;
+            }
+        }
+
+        true
     }
 }
 

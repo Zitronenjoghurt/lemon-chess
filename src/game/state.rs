@@ -19,6 +19,9 @@ pub struct GameState {
     /// Castle rights by color
     kingside_castling_rights: [bool; 2],
     queenside_castling_rights: [bool; 2],
+    /// Castle abilities by color
+    can_castle_kingside: [bool; 2],
+    can_castle_queenside: [bool; 2],
 }
 
 impl GameState {
@@ -38,6 +41,8 @@ impl GameState {
             en_passant_indices: [64, 64],
             kingside_castling_rights: [true, true],
             queenside_castling_rights: [true, true],
+            can_castle_kingside: [false, false],
+            can_castle_queenside: [false, false],
         };
 
         game_state.update()?;
@@ -66,6 +71,7 @@ impl GameState {
         self.update_occupancy_mask();
         self.update_check_states();
         self.update_legal_moves()?;
+        self.update_castle_ability();
         Ok(())
     }
 
@@ -76,6 +82,18 @@ impl GameState {
     pub fn update_check_states(&mut self) {
         self.check_states[Color::BLACK as usize] = self.chess_board.is_king_check(Color::BLACK);
         self.check_states[Color::WHITE as usize] = self.chess_board.is_king_check(Color::WHITE);
+    }
+
+    pub fn update_castle_ability(&mut self) {
+        for color_index in 0..2 {
+            let color = Color::from(color_index);
+
+            self.can_castle_kingside[color_index] = self.kingside_castling_rights[color_index]
+                && self.chess_board.can_castle_kingside(color);
+
+            self.can_castle_queenside[color_index] = self.queenside_castling_rights[color_index]
+                && self.chess_board.can_castle_queenside(color);
+        }
     }
 
     pub fn get_legal_moves(&mut self, color: Color) -> Result<AvailableMoves, GameError> {

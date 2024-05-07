@@ -5,7 +5,7 @@ use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::game::state::GameState;
+use crate::game::{position::Position, state::GameState};
 
 pub mod authentication;
 mod database;
@@ -43,10 +43,9 @@ pub struct AppState {
 async fn main() -> io::Result<()> {
     // Testing legal move generation
     let mut state = GameState::new().unwrap();
-    state.make_move(51, 35).unwrap();
-    state.make_move(35, 27).unwrap();
-    state.make_move(10, 26).unwrap();
-    state.make_move(27, 18).unwrap();
+    state.make_move(Position::G2.into(), Position::G3.into());
+    state.make_move(Position::F1.into(), Position::G2.into());
+    state.make_move(Position::G1.into(), Position::F3.into());
     //let moves = state.get_legal_moves(Color::BLACK);
 
     let db = database::setup().await.expect("Failed to set up MongoDB.");
