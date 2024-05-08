@@ -36,6 +36,20 @@ impl Default for ChessBoard {
 pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
 
 impl ChessBoard {
+    pub fn new_empty() -> Self {
+        Self {
+            colors: [BitBoard(0), BitBoard(0)],
+            pieces: [
+                BitBoard(0),
+                BitBoard(0),
+                BitBoard(0),
+                BitBoard(0),
+                BitBoard(0),
+                BitBoard(0),
+            ],
+        }
+    }
+
     pub fn validate_index(index: u8) -> Result<(), GameError> {
         if index >= 64 {
             return Err(GameError::ValidationError(
@@ -43,6 +57,91 @@ impl ChessBoard {
             ));
         }
         Ok(())
+    }
+
+    pub fn to_fen_positions(&self) -> String {
+        let mut result = String::new();
+        let mut row_string = String::new();
+        let mut empty_cells: u8 = 0;
+        for i in (0..64).rev() {
+            let is_end_of_row = i % 8 == 0;
+            let (piece, color) = self.piece_and_color_at_cell(i).unwrap();
+            let has_piece = piece != Piece::NONE && color != Color::NONE;
+
+            if !has_piece {
+                empty_cells += 1;
+                if !is_end_of_row {
+                    continue;
+                }
+            }
+
+            if empty_cells > 0 {
+                row_string.push_str(&empty_cells.to_string());
+                empty_cells = 0;
+            }
+
+            if has_piece {
+                row_string.push_str(&piece.get_fen_letter(color));
+            }
+
+            if is_end_of_row {
+                let reversed_row_string = row_string.chars().rev().collect::<String>();
+                result.push_str(&reversed_row_string);
+                row_string = String::new();
+
+                // Prevents trailing / at the end
+                if i != 0 {
+                    result.push('/');
+                }
+            }
+        }
+
+        result
+    }
+
+    pub fn from_fen_positions(fen: &str) -> Result<Self, GameError> {
+        let mut board = Self::new_empty();
+
+        for (row_index, fen_row) in fen.split('/').enumerate() {
+            if fen_row.is_empty() {
+                continue;
+            }
+
+            if row_index >= 8 {
+                return Err(GameError::DecodingError(
+                    "FEN-String included too many rows".to_string(),
+                ));
+            }
+
+            let row = 7 - row_index;
+            let mut column: u32 = 0;
+            for fen_char in fen_row.chars() {
+                if let Some(digit) = fen_char.to_digit(10) {
+                    column += digit;
+                    continue;
+                }
+
+                if column >= 8 {
+                    return Err(GameError::DecodingError(format!(
+                        "Invalid digit in FEN-String in row {}",
+                        (7 - row) + 1
+                    )));
+                }
+
+                let (piece, color) = Piece::from_fen_letter(fen_char);
+                if piece == Piece::NONE {
+                    return Err(GameError::DecodingError(format!(
+                        "Found invalid character in FEN-String: {}",
+                        fen_char
+                    )));
+                }
+                let index = ((row * 8) + column as usize) as u8;
+                board.place_piece(index, piece, color)?;
+                column += 1;
+            }
+        }
+
+        Ok(board)
     }
 
     pub fn to_base64(&self) -> Result<String, GameError> {
@@ -116,6 +215,20 @@ impl ChessBoard {
         let piece = Self::piece_at_cell(self, index)?;
         let color = Self::color_at_cell(self, index)?;
         Ok((piece, color))
+    }
+
+    pub fn place_piece(&mut self, index: u8, piece: Piece, color: Color) -> Result<(), GameError> {
+        Self::validate_index(index)?;
+        if piece == Piece::NONE || color == Color::NONE {
+            return Err(GameError::ValidationError(
+                "Unable to place undefined piece or piece with undefined color".to_string(),
+            ));
+        }
+
+        self.pieces[piece as usize].set_bit(index);
+        self.colors[color as usize].set_bit(index);
+
+        Ok(())
     }
 
     pub fn mask_by_piece_and_color(&self, piece: Piece, color: Color) -> BitBoard {

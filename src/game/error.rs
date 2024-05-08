@@ -2,6 +2,7 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum GameError {
+    DecodingError(String),
     EncodingError(String),
     ValidationError(String),
 }

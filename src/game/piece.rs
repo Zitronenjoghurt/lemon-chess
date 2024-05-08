@@ -191,4 +191,43 @@ impl Piece {
             format!("B_{}.png", name)
         }
     }
+
+    pub fn get_letter(&self) -> String {
+        match self {
+            Piece::PAWN => "P".to_string(),
+            Piece::BISHOP => "B".to_string(),
+            Piece::KNIGHT => "N".to_string(),
+            Piece::ROOK => "R".to_string(),
+            Piece::QUEEN => "Q".to_string(),
+            Piece::KING => "K".to_string(),
+            Piece::NONE => "X".to_string(),
+        }
+    }
+
+    pub fn get_fen_letter(&self, color: Color) -> String {
+        if color == Color::WHITE {
+            self.get_letter()
+        } else {
+            self.get_letter().to_lowercase()
+        }
+    }
+
+    pub fn from_fen_letter(fen_letter: char) -> (Self, Color) {
+        let color = match fen_letter.is_ascii_uppercase() {
+            true => Color::WHITE,
+            false => Color::BLACK,
+        };
+        let letter = fen_letter.to_ascii_uppercase();
+        let piece = match letter {
+            'P' => Piece::PAWN,
+            'B' => Piece::BISHOP,
+            'N' => Piece::KNIGHT,
+            'R' => Piece::ROOK,
+            'Q' => Piece::QUEEN,
+            'K' => Piece::KING,
+            _ => Piece::NONE,
+        };
+
+        (piece, color)
+    }
 }
