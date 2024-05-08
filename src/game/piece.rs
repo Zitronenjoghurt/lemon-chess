@@ -170,4 +170,25 @@ impl Piece {
 
         masks
     }
+
+    pub fn get_name(&self) -> String {
+        match self {
+            Piece::PAWN => "Pawn".to_string(),
+            Piece::BISHOP => "Bishop".to_string(),
+            Piece::KNIGHT => "Knight".to_string(),
+            Piece::ROOK => "Rook".to_string(),
+            Piece::QUEEN => "Queen".to_string(),
+            Piece::KING => "King".to_string(),
+            Piece::NONE => "None".to_string(),
+        }
+    }
+
+    pub fn get_image_name(&self, color: Color) -> String {
+        let name = self.get_name();
+        if color == Color::WHITE {
+            format!("W_{}.png", name)
+        } else {
+            format!("B_{}.png", name)
+        }
+    }
 }

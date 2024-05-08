@@ -10,7 +10,7 @@ use super::{
 
 #[derive(Debug, Serialize)]
 pub struct GameState {
-    chess_board: ChessBoard,
+    pub chess_board: ChessBoard,
     /// A mask including all occupied cells
     occupancy_mask: BitBoard,
     /// Initial pawn locations by color, 0 = black, 1 = white

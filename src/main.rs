@@ -5,7 +5,7 @@ use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::game::{color::Color, position::Position, state::GameState};
+use crate::game::{color::Color, position::Position, render::render, state::GameState};
 
 pub mod authentication;
 mod database;
@@ -23,6 +23,7 @@ pub mod game {
     pub mod error;
     pub mod piece;
     pub mod position;
+    pub mod render;
     pub mod state;
 }
 
@@ -48,7 +49,7 @@ async fn main() -> io::Result<()> {
     state.make_move(Position::G1.into(), Position::F3.into());
     state.castle_kingside(Color::WHITE);
     //let moves = state.get_legal_moves(Color::BLACK);
-
+    let test = render(state);
     let db = database::setup().await.expect("Failed to set up MongoDB.");
 
     let app_state = AppState { database: db };
