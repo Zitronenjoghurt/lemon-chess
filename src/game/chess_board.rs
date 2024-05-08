@@ -122,6 +122,16 @@ impl ChessBoard {
         self.pieces[piece as usize] & self.colors[color as usize]
     }
 
+    pub fn relocate_piece(&mut self, from: u8, to: u8) -> Result<(), GameError> {
+        Self::validate_index(to)?;
+        let (piece, color) = self.piece_and_color_at_cell(from)?;
+        self.pieces[piece as usize].clear_bit(from);
+        self.pieces[piece as usize].set_bit(to);
+        self.colors[color as usize].clear_bit(from);
+        self.colors[color as usize].set_bit(to);
+        Ok(())
+    }
+
     pub fn make_move(
         &mut self,
         from: u8,
@@ -203,6 +213,42 @@ impl ChessBoard {
         }
 
         Ok(true)
+    }
+
+    pub fn castle_kingside(&mut self, king_index: u8, rook_index: u8) -> Result<(), GameError> {
+        Self::validate_index(king_index)?;
+        Self::validate_index(rook_index)?;
+
+        let color = self.color_at_cell(king_index)?;
+        let new_king_index = match color {
+            Color::WHITE => 6,
+            Color::BLACK => 62,
+            Color::NONE => 1,
+        };
+        let new_rook_index = new_king_index - 1;
+
+        self.relocate_piece(king_index, new_king_index)?;
+        self.relocate_piece(rook_index, new_rook_index)?;
+
+        Ok(())
+    }
+
+    pub fn castle_queenside(&mut self, king_index: u8, rook_index: u8) -> Result<(), GameError> {
+        Self::validate_index(king_index)?;
+        Self::validate_index(rook_index)?;
+
+        let color = self.color_at_cell(king_index)?;
+        let new_king_index = match color {
+            Color::WHITE => 2,
+            Color::BLACK => 58,
+            Color::NONE => 1,
+        };
+        let new_rook_index = new_king_index + 1;
+
+        self.relocate_piece(king_index, new_king_index)?;
+        self.relocate_piece(rook_index, new_rook_index)?;
+
+        Ok(())
     }
 
     pub fn generate_legal_moves(

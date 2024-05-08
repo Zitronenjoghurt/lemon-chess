@@ -1,7 +1,12 @@
 use crate::game::{bit_board::BitBoard, chess_board::ChessBoard};
 use serde::Serialize;
 
-use super::{chess_board::AvailableMoves, color::Color, error::GameError, piece::Piece};
+use super::{
+    chess_board::AvailableMoves,
+    color::{self, Color},
+    error::GameError,
+    piece::Piece,
+};
 
 #[derive(Debug, Serialize)]
 pub struct GameState {
@@ -22,6 +27,10 @@ pub struct GameState {
     /// Castle abilities by color
     can_castle_kingside: [bool; 2],
     can_castle_queenside: [bool; 2],
+    /// Rook & king positions by color
+    king_indices: [u8; 2],
+    kingside_rook_indices: [u8; 2],
+    queenside_rook_indices: [u8; 2],
 }
 
 impl GameState {
@@ -43,6 +52,10 @@ impl GameState {
             queenside_castling_rights: [true, true],
             can_castle_kingside: [false, false],
             can_castle_queenside: [false, false],
+            // Uses default board, therefore positions are predictable
+            king_indices: [4, 60],
+            kingside_rook_indices: [7, 63],
+            queenside_rook_indices: [0, 56],
         };
 
         game_state.update()?;
@@ -64,6 +77,40 @@ impl GameState {
 
         self.update()?;
 
+        Ok(true)
+    }
+
+    pub fn castle_kingside(&mut self, color: Color) -> Result<bool, GameError> {
+        if !self.can_castle_kingside[color as usize] {
+            return Ok(false);
+        }
+
+        self.chess_board.castle_kingside(
+            self.king_indices[color as usize],
+            self.kingside_rook_indices[color as usize],
+        )?;
+
+        self.kingside_castling_rights[color as usize] = false;
+        self.queenside_castling_rights[color as usize] = false;
+
+        self.update()?;
+        Ok(true)
+    }
+
+    pub fn castle_queenside(&mut self, color: Color) -> Result<bool, GameError> {
+        if !self.can_castle_queenside[color as usize] {
+            return Ok(false);
+        }
+
+        self.chess_board.castle_queenside(
+            self.king_indices[color as usize],
+            self.queenside_rook_indices[color as usize],
+        )?;
+
+        self.kingside_castling_rights[color as usize] = false;
+        self.queenside_castling_rights[color as usize] = false;
+
+        self.update()?;
         Ok(true)
     }
 
