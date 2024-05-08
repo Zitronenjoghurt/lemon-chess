@@ -45,14 +45,10 @@ pub struct AppState {
 #[tokio::main]
 async fn main() -> io::Result<()> {
     // Testing legal move generation
-    let mut state = GameState::new().unwrap();
-    state.make_move(Position::G2.into(), Position::G3.into());
-    state.make_move(Position::F1.into(), Position::G2.into());
-    state.make_move(Position::G1.into(), Position::F3.into());
-    state.castle_kingside(Color::WHITE);
-    //let moves = state.get_legal_moves(Color::BLACK);
-    let test = state.chess_board.to_fen_positions();
-    let board = ChessBoard::from_fen_positions(&test).unwrap();
+    let mut state =
+        GameState::from_fen("RnRq1rB1/pppQppNp/8/3P1P2/1P1P1R2/2Q3B1/P3P1PP/1k2Kr2 w - - 0 1")
+            .unwrap();
+    render(state);
     let db = database::setup().await.expect("Failed to set up MongoDB.");
 
     let app_state = AppState { database: db };

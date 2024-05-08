@@ -5,6 +5,11 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize)]
+/// INFERENCES:
+/// - Board is always 8x8
+/// - Only 1 King
+/// - Rooks always on either side of the king
+/// - White is always at the bottom of the board (at least internally, board can be rotated for visualization)
 pub struct ChessBoard {
     pub colors: [BitBoard; 2],
     pub pieces: [BitBoard; 6],

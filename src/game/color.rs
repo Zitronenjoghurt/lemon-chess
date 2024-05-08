@@ -23,4 +23,20 @@ impl Color {
             Color::WHITE
         }
     }
+
+    pub fn get_fen_letter(&self) -> char {
+        match self {
+            Color::WHITE => 'w',
+            Color::BLACK => 'b',
+            Color::NONE => '-',
+        }
+    }
+
+    pub fn from_fen_letter(letter: char) -> Self {
+        match letter.to_ascii_lowercase() {
+            'w' => Color::WHITE,
+            'b' => Color::BLACK,
+            _ => Color::NONE,
+        }
+    }
 }

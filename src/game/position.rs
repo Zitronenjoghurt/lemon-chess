@@ -1,3 +1,5 @@
+use super::error::GameError;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // Prioritizing speed, its faster to just map all 64 coordinates to the respective index
 pub enum Position {
@@ -67,8 +69,67 @@ pub enum Position {
     H8,
 }
 
+impl Position {
+    pub fn as_str(&self) -> String {
+        let index = *self as u8;
+        let file = b'A' + (index % 8);
+        let rank = 1 + (index / 8);
+        format!("{}{}", file as char, rank)
+    }
+}
+
+impl std::convert::TryFrom<String> for Position {
+    type Error = GameError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() != 2 {
+            return Err(GameError::DecodingError(format!(
+                "Invalid position '{}'. Position must be 2 characters long.",
+                value
+            )));
+        }
+
+        let mut chars = value.chars();
+        let file_char = chars.nth(0).unwrap_or_default();
+        let rank_char = chars.nth(0).unwrap_or_default();
+
+        if !file_char.is_ascii_alphabetic() || !rank_char.is_ascii_digit() {
+            return Err(GameError::DecodingError(format!(
+                "Invalid position format: '{}'.",
+                value
+            )));
+        }
+
+        let file = file_char.to_ascii_uppercase() as u8 - b'A';
+        let rank = rank_char.to_digit(10).unwrap_or_default() as u8 - 1;
+
+        if file > 7 || rank > 7 {
+            return Err(GameError::DecodingError(format!(
+                "Position out of bounds: '{}'.",
+                value
+            )));
+        }
+
+        let index = rank * 8 + file;
+        Self::try_from(index)
+            .map_err(|_| GameError::DecodingError(format!("Invalid position index: '{}'.", index)))
+    }
+}
+
 impl From<Position> for u8 {
     fn from(val: Position) -> Self {
         val as u8
+    }
+}
+
+impl std::convert::TryFrom<u8> for Position {
+    type Error = ();
+
+    fn try_from(index: u8) -> Result<Self, Self::Error> {
+        if index < 64 {
+            Ok(unsafe { std::mem::transmute::<u8, Position>(index) })
+        } else {
+            Err(())
+        }
     }
 }
