@@ -32,6 +32,12 @@ impl From<mongodb::bson::ser::Error> for ApiError {
     }
 }
 
+impl From<mongodb::bson::oid::Error> for ApiError {
+    fn from(error: mongodb::bson::oid::Error) -> Self {
+        ApiError::SerializationError(error.to_string())
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {

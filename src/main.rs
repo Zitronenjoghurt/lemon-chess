@@ -5,7 +5,6 @@ use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
-pub mod authentication;
 mod database;
 mod docs;
 pub mod error;
@@ -13,6 +12,11 @@ pub mod error;
 pub mod entities {
     pub mod session;
     pub mod user;
+}
+
+pub mod extractors {
+    pub mod authentication;
+    pub mod session_extractor;
 }
 
 pub mod game {
@@ -30,10 +34,12 @@ pub mod models {
     pub mod enums;
     pub mod query_models;
     pub mod response_models;
+    pub mod session_models;
 }
 
 pub mod resources {
     pub mod ping;
+    pub mod session;
     pub mod user;
 }
 
@@ -55,6 +61,7 @@ async fn main() -> io::Result<()> {
 
     let app = Router::<AppState>::new()
         .nest("/", resources::ping::router())
+        .nest("/", resources::session::router())
         .nest("/", resources::user::router())
         .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", docs::ApiDoc::openapi()))
         .merge(Redoc::with_url("/redoc", docs::ApiDoc::openapi()))

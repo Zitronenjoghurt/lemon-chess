@@ -18,6 +18,7 @@ use utoipa::{
     ),
     paths(
         resources::ping::get_ping,
+        resources::session::get_session,
         resources::user::post_user_discord_register,
     ),
     tags(

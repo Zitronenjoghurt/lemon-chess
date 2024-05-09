@@ -66,7 +66,8 @@ pub async fn find_session_by_id(
     collection: &Collection<Session>,
     id: &str,
 ) -> Result<Option<Session>, ApiError> {
-    let filter = doc! { "_id": id };
+    let oid = ObjectId::parse_str(id)?;
+    let filter = doc! { "_id": oid };
     let session = collection.find_one(Some(filter), None).await?;
     Ok(session)
 }

@@ -1,10 +1,14 @@
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::{
     fmt::{self, Display, Formatter},
     ops::{Add, BitAnd, BitOr, Not},
 };
 
-#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash, Serialize, Deserialize)]
+// Will be De/Serialized as a Bitstring to avoid having too large numbers for bson to handle
+#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash)]
 pub struct BitBoard(pub u64);
 
 impl BitBoard {
@@ -246,6 +250,56 @@ impl Display for BitBoard {
             grid.push('\n');
         }
         write!(f, "{}", grid)
+    }
+}
+
+impl Serialize for BitBoard {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{:064b}", self.0))
+    }
+}
+
+struct BitBoardVisitor;
+
+impl<'de> Visitor<'de> for BitBoardVisitor {
+    type Value = BitBoard;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a binary string of length 64")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if value.len() != 64 {
+            return Err(E::custom(format!(
+                "expected a binary string of length 64, got length {}",
+                value.len()
+            )));
+        }
+
+        let mut bits = 0;
+        for (i, char) in value.chars().enumerate() {
+            if char == '1' {
+                bits |= 1 << (63 - i); // Assuming big endian bit order
+            } else if char != '0' {
+                return Err(E::invalid_value(de::Unexpected::Char(char), &self));
+            }
+        }
+        Ok(BitBoard(bits))
+    }
+}
+
+impl<'de> Deserialize<'de> for BitBoard {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(BitBoardVisitor)
     }
 }
 
