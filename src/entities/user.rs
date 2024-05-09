@@ -36,7 +36,7 @@ pub async fn find_user_by_key(
     Ok(user)
 }
 
-async fn find_users_by_keys(
+pub async fn find_users_by_keys(
     collection: &Collection<User>,
     keys: Vec<&str>,
 ) -> Result<Vec<Option<User>>, ApiError> {

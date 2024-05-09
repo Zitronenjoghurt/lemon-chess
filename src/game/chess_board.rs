@@ -1,10 +1,10 @@
 use crate::game::{bit_board::BitBoard, color::Color, error::GameError, piece::Piece};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::position::{Move, Position};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 /// INFERENCES:
 /// - Board is always 8x8
 /// - Only 1 King
@@ -36,7 +36,7 @@ impl Default for ChessBoard {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Clone, Debug, Default, Hash, Serialize)]
+#[derive(PartialEq, Eq, PartialOrd, Clone, Debug, Default, Hash, Serialize, Deserialize)]
 /// Describes all available moves with a location index and a vector of target indices
 pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
 

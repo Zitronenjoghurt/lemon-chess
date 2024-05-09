@@ -1,14 +1,9 @@
 use axum::Router;
-use serde::Serialize;
 use std::io;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
-
-use crate::game::{
-    chess_board::ChessBoard, color::Color, position::Position, render::render, state::GameState,
-};
 
 pub mod authentication;
 mod database;
@@ -16,6 +11,7 @@ mod docs;
 pub mod error;
 
 pub mod entities {
+    pub mod session;
     pub mod user;
 }
 
@@ -36,6 +32,10 @@ pub mod models {
 
 pub mod resources {
     pub mod ping;
+}
+
+pub mod utils {
+    pub mod time_operations;
 }
 
 #[derive(Clone)]

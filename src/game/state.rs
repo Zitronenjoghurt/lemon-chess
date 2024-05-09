@@ -1,11 +1,11 @@
 use crate::game::{bit_board::BitBoard, chess_board::ChessBoard};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{
     chess_board::AvailableMoves, color::Color, error::GameError, piece::Piece, position::Position,
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GameState {
     pub chess_board: ChessBoard,
     /// Next to move, 0 = white, 1 = black

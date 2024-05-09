@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display, Formatter},
     ops::{Add, BitAnd, BitOr, Not},
 };
 
-#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash, Serialize)]
+#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash, Serialize, Deserialize)]
 pub struct BitBoard(pub u64);
 
 impl BitBoard {
