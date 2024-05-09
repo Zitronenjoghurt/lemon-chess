@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use crate::game::{bit_board::BitBoard, color::Color, error::GameError, piece::Piece};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
@@ -489,40 +487,54 @@ impl ChessBoard {
         final_mask
     }
 
-    pub fn can_castle_kingside(&self, color: Color) -> bool {
+    /// Returns king and kingside rook index
+    pub fn get_kingside_rook(&self, color: Color) -> Option<(u8, u8)> {
         let king_index = self.get_king_position_by_color(color);
         let rook_board = self.pieces[Piece::ROOK as usize] & self.colors[color as usize];
         let rook_indices = rook_board.get_bits();
-        let rook_index = match rook_indices.iter().max() {
-            Some(index) => index,
-            None => {
-                return false;
+        match rook_indices.iter().max().copied() {
+            Some(rook_index) => {
+                if king_index > rook_index {
+                    None
+                } else {
+                    Some((king_index, rook_index))
+                }
             }
-        };
-        // rook is not kingside
-        if king_index > *rook_index {
-            return false;
+            None => None,
         }
+    }
 
-        self.can_castle_common(color, &king_index, *rook_index)
+    /// Returns queen and queenside rook index
+    pub fn get_queenside_rook(&self, color: Color) -> Option<(u8, u8)> {
+        let king_index = self.get_king_position_by_color(color);
+        let rook_board = self.pieces[Piece::ROOK as usize] & self.colors[color as usize];
+        let rook_indices = rook_board.get_bits();
+        match rook_indices.iter().min().copied() {
+            Some(rook_index) => {
+                if king_index < rook_index {
+                    None
+                } else {
+                    Some((king_index, rook_index))
+                }
+            }
+            None => None,
+        }
+    }
+
+    pub fn can_castle_kingside(&self, color: Color) -> bool {
+        let (king_index, rook_index) = match self.get_kingside_rook(color) {
+            Some(indices) => indices,
+            None => return false,
+        };
+        self.can_castle_common(color, &king_index, rook_index)
     }
 
     pub fn can_castle_queenside(&self, color: Color) -> bool {
-        let king_index = self.get_king_position_by_color(color);
-        let rook_board = self.pieces[Piece::ROOK as usize] & self.colors[color as usize];
-        let rook_indices = rook_board.get_bits();
-        let rook_index = match rook_indices.iter().min() {
-            Some(index) => index,
-            None => {
-                return false;
-            }
+        let (king_index, rook_index) = match self.get_queenside_rook(color) {
+            Some(indices) => indices,
+            None => return false,
         };
-        // rook is not queenside
-        if king_index < *rook_index {
-            return false;
-        }
-
-        self.can_castle_common(color, &king_index, *rook_index)
+        self.can_castle_common(color, &king_index, rook_index)
     }
 
     pub fn can_castle_common(&self, color: Color, king_index: &u8, rook_index: u8) -> bool {

@@ -156,6 +156,59 @@ impl GameState {
             BitBoard(0b0000000011111111000000000000000000000000000000000000000000000000),
         ];
 
+        // Castling king/rook indices, important to comply with Fischer960 king and rook positions
+        let white_king = if kingside_castling_rights[Color::WHITE as usize]
+            || queenside_castling_rights[Color::WHITE as usize]
+        {
+            chess_board.get_king_position_by_color(Color::WHITE)
+        } else {
+            4
+        };
+
+        let black_king = if kingside_castling_rights[Color::BLACK as usize]
+            || queenside_castling_rights[Color::BLACK as usize]
+        {
+            chess_board.get_king_position_by_color(Color::BLACK)
+        } else {
+            60
+        };
+
+        let white_kingside_rook = if kingside_castling_rights[Color::WHITE as usize] {
+            let (_, rook) = chess_board
+                .get_kingside_rook(Color::WHITE)
+                .unwrap_or((4, 7));
+            rook
+        } else {
+            7
+        };
+
+        let black_kingside_rook = if kingside_castling_rights[Color::BLACK as usize] {
+            let (_, rook) = chess_board
+                .get_kingside_rook(Color::BLACK)
+                .unwrap_or((60, 63));
+            rook
+        } else {
+            63
+        };
+
+        let white_queenside_rook = if queenside_castling_rights[Color::WHITE as usize] {
+            let (_, rook) = chess_board
+                .get_queenside_rook(Color::WHITE)
+                .unwrap_or((4, 0));
+            rook
+        } else {
+            0
+        };
+
+        let black_queenside_rook = if queenside_castling_rights[Color::BLACK as usize] {
+            let (_, rook) = chess_board
+                .get_queenside_rook(Color::BLACK)
+                .unwrap_or((60, 56));
+            rook
+        } else {
+            56
+        };
+
         let mut state = Self {
             initial_pawn_masks,
             chess_board,
@@ -171,9 +224,9 @@ impl GameState {
             can_castle_kingside: [false, false],
             can_castle_queenside: [false, false],
             // Use default FEN locations, HAS TO BE ADJUSTED FOR FISCHER960 to retrieve the proper indices if castling rights are true for the given rook
-            king_indices: [4, 60],
-            kingside_rook_indices: [7, 63],
-            queenside_rook_indices: [0, 56],
+            king_indices: [white_king, black_king],
+            kingside_rook_indices: [white_kingside_rook, black_kingside_rook],
+            queenside_rook_indices: [white_queenside_rook, black_queenside_rook],
         };
 
         state.update()?;
