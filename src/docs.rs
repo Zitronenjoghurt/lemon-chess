@@ -1,4 +1,7 @@
-use crate::resources;
+use crate::{
+    models::response_models::{MessageResponse, UserApiKey},
+    resources,
+};
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
@@ -11,14 +14,16 @@ use utoipa::{
         description="A chess web service handling multiplayer, sessions and all game logic.\n\nAll available docs: Rapidoc (/docs), Swagger (/swagger) and Redoc (/redoc).\n\nIf you find bugs or have feedback please create an issue here: https://github.com/Zitronenjoghurt/tamagotchi-api/issues"
     ),
     paths(
-        resources::ping::get_ping
+        resources::ping::get_ping,
+        resources::user::post_user_discord_register,
     ),
     tags(
-        (name = "Misc", description = "Miscellaneous endpoints")
+        (name = "Misc", description = "Miscellaneous endpoints"),
+        (name = "User", description = "User endpoints")
     ),
     modifiers(&SecurityAddon),
     components(
-        schemas(),
+        schemas(MessageResponse, UserApiKey),
     )
 )]
 pub struct ApiDoc;

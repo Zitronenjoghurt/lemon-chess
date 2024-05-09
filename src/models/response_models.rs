@@ -5,3 +5,8 @@ use utoipa::ToSchema;
 pub struct MessageResponse {
     pub message: String,
 }
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct UserApiKey {
+    pub api_key: String,
+}

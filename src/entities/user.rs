@@ -4,9 +4,13 @@ use mongodb::{
     options::UpdateOptions,
     Collection,
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::error::ApiError;
+use crate::{
+    error::ApiError, models::enums::PermissionLevel, utils::time_operations::timestamp_now_nanos,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct User {
@@ -14,9 +18,53 @@ pub struct User {
     pub name: String,
     pub display_name: String,
     pub created_stamp: u64,
+    pub permission: PermissionLevel,
+    #[serde(default)]
+    /// If user was added through a negotiator via discord, this is the discord user id
+    pub discord_id: String,
 }
 
 impl User {
+    /// Creates a new discord user
+    pub async fn new_from_discord(
+        collection: &Collection<User>,
+        name: &str,
+        id: &str,
+    ) -> Result<Self, ApiError> {
+        if find_user_by_discord_id(collection, id).await?.is_some() {
+            return Err(ApiError::BadRequest(
+                "User with the given user id already exists.".to_string(),
+            ));
+        };
+
+        // Name already exists so it generates a random number added behind the name
+        let user_name = if find_user_by_name(collection, &name.to_lowercase())
+            .await?
+            .is_some()
+        {
+            let mut rng = rand::thread_rng();
+            let random_number = rng.gen_range(100000000..1000000000);
+            format!("{}-{}", name, random_number).to_lowercase()
+        } else {
+            name.to_string().to_lowercase()
+        };
+
+        let key = Uuid::new_v4().simple().to_string();
+
+        let user = Self {
+            key,
+            name: user_name.clone(),
+            display_name: user_name,
+            created_stamp: timestamp_now_nanos(),
+            permission: PermissionLevel::User,
+            discord_id: id.to_string(),
+        };
+
+        user.save(collection).await?;
+
+        Ok(user)
+    }
+
     pub async fn save(&self, collection: &Collection<User>) -> Result<(), ApiError> {
         let filter = doc! { "key": &self.key };
         let update = doc! { "$set": bson::to_bson(self)? };
@@ -52,6 +100,15 @@ pub async fn find_user_by_name(
     name: &str,
 ) -> Result<Option<User>, ApiError> {
     let filter = doc! { "name": name.to_lowercase() };
+    let user = collection.find_one(Some(filter), None).await?;
+    Ok(user)
+}
+
+pub async fn find_user_by_discord_id(
+    collection: &Collection<User>,
+    discord_id: &str,
+) -> Result<Option<User>, ApiError> {
+    let filter = doc! { "discord_id": discord_id };
     let user = collection.find_one(Some(filter), None).await?;
     Ok(user)
 }

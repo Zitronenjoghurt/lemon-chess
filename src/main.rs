@@ -27,14 +27,18 @@ pub mod game {
 }
 
 pub mod models {
+    pub mod enums;
+    pub mod query_models;
     pub mod response_models;
 }
 
 pub mod resources {
     pub mod ping;
+    pub mod user;
 }
 
 pub mod utils {
+    pub mod sanitize;
     pub mod time_operations;
 }
 
@@ -51,6 +55,7 @@ async fn main() -> io::Result<()> {
 
     let app = Router::<AppState>::new()
         .nest("/", resources::ping::router())
+        .nest("/", resources::user::router())
         .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", docs::ApiDoc::openapi()))
         .merge(Redoc::with_url("/redoc", docs::ApiDoc::openapi()))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/docs"))
