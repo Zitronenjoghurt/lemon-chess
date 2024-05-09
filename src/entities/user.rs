@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use futures::future::try_join_all;
 use mongodb::{
     bson::{self, doc},
@@ -19,6 +21,10 @@ pub struct User {
     pub display_name: String,
     pub created_stamp: u64,
     pub permission: PermissionLevel,
+    #[serde(default)]
+    pub last_access_stamp: u64,
+    #[serde(default)]
+    pub endpoint_usage: HashMap<String, u64>,
     #[serde(default)]
     /// If user was added through a negotiator via discord, this is the discord user id
     pub discord_id: String,
@@ -50,13 +56,16 @@ impl User {
         };
 
         let key = Uuid::new_v4().simple().to_string();
+        let current_stamp = timestamp_now_nanos();
 
         let user = Self {
             key,
             name: user_name.clone(),
             display_name: user_name,
-            created_stamp: timestamp_now_nanos(),
+            created_stamp: current_stamp,
             permission: PermissionLevel::User,
+            last_access_stamp: current_stamp,
+            endpoint_usage: HashMap::new(),
             discord_id: id.to_string(),
         };
 
@@ -72,6 +81,14 @@ impl User {
 
         collection.update_one(filter, update, Some(options)).await?;
         Ok(())
+    }
+
+    pub fn use_endpoint(&mut self, method: &str, path: &str) {
+        self.last_access_stamp = timestamp_now_nanos();
+        *self
+            .endpoint_usage
+            .entry(format!("{method} {path}"))
+            .or_insert(0) += 1;
     }
 }
 

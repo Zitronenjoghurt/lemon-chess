@@ -1,6 +1,6 @@
-use crate::authentication::ExtractUser;
 use crate::entities::user::User;
 use crate::error::ApiError;
+use crate::extractors::authentication::ExtractUser;
 use crate::models::enums::PermissionLevel;
 use crate::models::query_models::DiscordUserCreation;
 use crate::models::response_models::UserApiKey;

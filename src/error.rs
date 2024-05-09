@@ -10,6 +10,7 @@ pub enum ApiError {
     BadRequest(String),
     DatabaseError(String),
     NoPermission(String),
+    NotFound(String),
     SerializationError(String),
 }
 
@@ -48,6 +49,7 @@ impl IntoResponse for ApiError {
             ),
             ApiError::BadRequest(message) => (StatusCode::BAD_REQUEST, message),
             ApiError::NoPermission(message) => (StatusCode::FORBIDDEN, message),
+            ApiError::NotFound(message) => (StatusCode::NOT_FOUND, message),
         };
 
         (status, error_message).into_response()

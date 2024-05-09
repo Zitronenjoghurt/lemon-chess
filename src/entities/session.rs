@@ -19,7 +19,7 @@ pub struct Session {
 }
 
 impl Session {
-    pub async fn new(name: String, keys: [String; 2], game_state: GameState) -> Self {
+    pub fn new(name: String, keys: [String; 2], game_state: GameState) -> Self {
         Self {
             id: None,
             name,
@@ -60,4 +60,13 @@ pub async fn find_sessions_by_key(
     let cursor = collection.find(filter, None).await?;
     let sessions: Vec<Session> = cursor.try_collect().await?;
     Ok(sessions)
+}
+
+pub async fn find_session_by_id(
+    collection: &Collection<Session>,
+    id: &str,
+) -> Result<Option<Session>, ApiError> {
+    let filter = doc! { "_id": id };
+    let session = collection.find_one(Some(filter), None).await?;
+    Ok(session)
 }

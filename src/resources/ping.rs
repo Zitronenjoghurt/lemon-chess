@@ -1,4 +1,4 @@
-use crate::authentication::ExtractUser;
+use crate::extractors::authentication::ExtractUser;
 use crate::{models::response_models::MessageResponse, AppState};
 use axum::response::{IntoResponse, Response};
 use axum::{routing::get, Json, Router};

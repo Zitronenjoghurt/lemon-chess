@@ -1,5 +1,8 @@
 use crate::{
-    models::response_models::{MessageResponse, UserApiKey},
+    models::{
+        response_models::{MessageResponse, UserApiKey},
+        session_models::SessionInfo,
+    },
     resources,
 };
 use utoipa::{
@@ -19,11 +22,12 @@ use utoipa::{
     ),
     tags(
         (name = "Misc", description = "Miscellaneous endpoints"),
-        (name = "User", description = "User endpoints")
+        (name = "User", description = "User endpoints"),
+        (name = "Session", description = "Session endpoints"),
     ),
     modifiers(&SecurityAddon),
     components(
-        schemas(MessageResponse, UserApiKey),
+        schemas(MessageResponse, UserApiKey, SessionInfo),
     )
 )]
 pub struct ApiDoc;
