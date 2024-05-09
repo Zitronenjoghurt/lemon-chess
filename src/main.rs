@@ -1,4 +1,5 @@
 use axum::Router;
+use serde::Serialize;
 use std::io;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
@@ -44,11 +45,6 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    // Testing legal move generation
-    let mut state =
-        GameState::from_fen("RnRq1rB1/pppQppNp/8/3P1P2/1P1P1R2/2Q3B1/P3P1PP/1k2Kr2 w - - 0 1")
-            .unwrap();
-    render(state);
     let db = database::setup().await.expect("Failed to set up MongoDB.");
 
     let app_state = AppState { database: db };

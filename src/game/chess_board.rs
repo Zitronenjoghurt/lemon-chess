@@ -2,6 +2,8 @@ use crate::game::{bit_board::BitBoard, color::Color, error::GameError, piece::Pi
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 
+use super::position::{Move, Position};
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize)]
 /// INFERENCES:
 /// - Board is always 8x8
@@ -37,6 +39,27 @@ impl Default for ChessBoard {
 #[derive(PartialEq, Eq, PartialOrd, Clone, Debug, Default, Hash, Serialize)]
 /// Describes all available moves with a location index and a vector of target indices
 pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
+
+impl AvailableMoves {
+    pub fn get_moves(&self) -> Result<Vec<Move>, GameError> {
+        let mut moves: Vec<Move> = Vec::new();
+        for (from, to_indices) in &self.0 {
+            for to in to_indices {
+                let from_position = Position::try_from(*from)?;
+                let to_position = Position::try_from(*to)?;
+                moves.push(Move(from_position, to_position));
+            }
+        }
+
+        Ok(moves)
+    }
+
+    pub fn get_moves_in_notation(&self) -> Result<Vec<String>, GameError> {
+        let moves = self.get_moves()?;
+        let notation_moves = moves.into_iter().map(String::from).collect();
+        Ok(notation_moves)
+    }
+}
 
 impl ChessBoard {
     pub fn new_empty() -> Self {
@@ -248,6 +271,7 @@ impl ChessBoard {
         Ok(())
     }
 
+    /// Returns a tuple of (success, was_capture_or_pawn_move)
     pub fn make_move(
         &mut self,
         from: u8,
@@ -255,20 +279,23 @@ impl ChessBoard {
         en_passant_indices: &mut [u8; 2],
         kingside_castling_rights: &mut [bool; 2],
         queenside_castling_rights: &mut [bool; 2],
-    ) -> Result<bool, GameError> {
+    ) -> Result<(bool, bool), GameError> {
         Self::validate_index(from)?;
         Self::validate_index(to)?;
 
         let (source_piece, source_color) = Self::piece_and_color_at_cell(self, from)?;
         let (target_piece, target_color) = Self::piece_and_color_at_cell(self, to)?;
         if source_piece == Piece::NONE || target_color == source_color {
-            return Ok(false);
+            return Ok((false, false));
         }
+
+        let mut capture_or_pawn_move = false;
 
         // Capture piece
         if target_piece != Piece::NONE {
             self.pieces[target_piece as usize].clear_bit(to);
             self.colors[target_color as usize].clear_bit(to);
+            capture_or_pawn_move = true;
         }
 
         // Update piece
@@ -328,7 +355,12 @@ impl ChessBoard {
             }
         }
 
-        Ok(true)
+        // Check if move was a pawn move, should it not already be a capture move yet
+        if source_piece == Piece::PAWN {
+            capture_or_pawn_move = true;
+        }
+
+        Ok((true, capture_or_pawn_move))
     }
 
     pub fn castle_kingside(&mut self, king_index: u8, rook_index: u8) -> Result<(), GameError> {
@@ -423,7 +455,7 @@ impl ChessBoard {
         let mut future_en_passant_indices = *en_passant_indices;
         let mut future_kingside_castling_rights = *kingside_castling_rights;
         let mut future_queenside_castling_rights = *queenside_castling_rights;
-        if let Ok(success) = future_board.make_move(
+        if let Ok((success, _)) = future_board.make_move(
             from,
             to,
             &mut future_en_passant_indices,
@@ -617,24 +649,30 @@ mod tests {
     #[test]
     fn test_make_move() {
         let mut board = ChessBoard::default();
-        assert!(board
-            .make_move(
-                Pos::H2.into(),
-                Pos::H3.into(),
-                &mut [64, 64],
-                &mut [true, true],
-                &mut [true, true]
-            )
-            .unwrap());
-        assert!(!board
-            .make_move(
-                Pos::H2.into(),
-                Pos::H3.into(),
-                &mut [64, 64],
-                &mut [true, true],
-                &mut [true, true]
-            )
-            .unwrap());
+        assert_eq!(
+            board
+                .make_move(
+                    Pos::H2.into(),
+                    Pos::H3.into(),
+                    &mut [64, 64],
+                    &mut [true, true],
+                    &mut [true, true]
+                )
+                .unwrap(),
+            (true, true)
+        );
+        assert_ne!(
+            board
+                .make_move(
+                    Pos::H2.into(),
+                    Pos::H3.into(),
+                    &mut [64, 64],
+                    &mut [true, true],
+                    &mut [true, true]
+                )
+                .unwrap(),
+            (true, true)
+        );
         assert_eq!(board.piece_at_cell(Pos::H2.into()).unwrap(), Piece::NONE);
         assert_eq!(board.piece_at_cell(Pos::H3.into()).unwrap(), Piece::PAWN);
     }

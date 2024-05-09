@@ -123,13 +123,25 @@ impl From<Position> for u8 {
 }
 
 impl std::convert::TryFrom<u8> for Position {
-    type Error = ();
+    type Error = GameError;
 
     fn try_from(index: u8) -> Result<Self, Self::Error> {
         if index < 64 {
             Ok(unsafe { std::mem::transmute::<u8, Position>(index) })
         } else {
-            Err(())
+            Err(GameError::DecodingError(format!(
+                "Can't create position from index {}. Index has to be between 0 and 63.",
+                index
+            )))
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Move(pub Position, pub Position);
+
+impl From<Move> for String {
+    fn from(m: Move) -> Self {
+        format!("{}->{}", m.0.as_str(), m.1.as_str())
     }
 }

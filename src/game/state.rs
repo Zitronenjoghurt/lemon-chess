@@ -1,5 +1,4 @@
 use crate::game::{bit_board::BitBoard, chess_board::ChessBoard};
-use image::error::DecodingError;
 use serde::Serialize;
 
 use super::{
@@ -9,16 +8,14 @@ use super::{
 #[derive(Debug, Serialize)]
 pub struct GameState {
     pub chess_board: ChessBoard,
-    /// Next to move, 0 = black, 1 = white
+    /// Next to move, 0 = white, 1 = black
     next_to_move: u8,
     half_move_counter: u8,
     full_move_counter: u8,
-    /// A mask including all occupied cells
-    occupancy_mask: BitBoard,
-    /// Initial pawn locations by color, 0 = black, 1 = white
+    /// Initial pawn locations by color, 0 = white, 1 = black
     initial_pawn_masks: [BitBoard; 2],
     /// All available moves (also by color)
-    available_moves: [AvailableMoves; 2],
+    pub available_moves: [AvailableMoves; 2],
     /// Check state by color
     check_states: [bool; 2],
     /// The fields of en passant by color, 64 being the NONE state
@@ -46,10 +43,9 @@ impl GameState {
         let mut game_state = Self {
             initial_pawn_masks,
             chess_board: board,
-            next_to_move: 1,
+            next_to_move: 0,
             half_move_counter: 0,
             full_move_counter: 1,
-            occupancy_mask: Default::default(),
             available_moves: Default::default(),
             check_states: [false, false],
             en_passant_indices: [64, 64],
@@ -215,7 +211,6 @@ impl GameState {
             next_to_move: active_color as u8,
             half_move_counter,
             full_move_counter,
-            occupancy_mask: Default::default(),
             available_moves: Default::default(),
             check_states: [false, false],
             en_passant_indices: [white_en_passent, black_en_passent],
@@ -223,7 +218,6 @@ impl GameState {
             queenside_castling_rights,
             can_castle_kingside: [false, false],
             can_castle_queenside: [false, false],
-            // Use default FEN locations, HAS TO BE ADJUSTED FOR FISCHER960 to retrieve the proper indices if castling rights are true for the given rook
             king_indices: [white_king, black_king],
             kingside_rook_indices: [white_kingside_rook, black_kingside_rook],
             queenside_rook_indices: [white_queenside_rook, black_queenside_rook],
@@ -235,7 +229,7 @@ impl GameState {
     }
 
     pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
-        let success = self.chess_board.make_move(
+        let (success, capture_or_pawn_move) = self.chess_board.make_move(
             from,
             to,
             &mut self.en_passant_indices,
@@ -247,6 +241,7 @@ impl GameState {
         }
 
         self.update()?;
+        self.clock(capture_or_pawn_move);
 
         Ok(true)
     }
@@ -265,6 +260,8 @@ impl GameState {
         self.queenside_castling_rights[color as usize] = false;
 
         self.update()?;
+        self.clock(false);
+
         Ok(true)
     }
 
@@ -282,19 +279,35 @@ impl GameState {
         self.queenside_castling_rights[color as usize] = false;
 
         self.update()?;
+        self.clock(false);
+
         Ok(true)
     }
 
+    /// Handles ticking move counter and switching active player
+    pub fn clock(&mut self, capture_or_pawn_move: bool) {
+        if Color::from(self.next_to_move as usize) == Color::BLACK {
+            self.full_move_counter += 1;
+        }
+
+        if capture_or_pawn_move {
+            self.half_move_counter = 0;
+        } else {
+            self.half_move_counter += 1;
+        }
+
+        if self.next_to_move == 1 {
+            self.next_to_move = 0;
+        } else {
+            self.next_to_move = 1;
+        }
+    }
+
     pub fn update(&mut self) -> Result<(), GameError> {
-        self.update_occupancy_mask();
         self.update_check_states();
         self.update_legal_moves()?;
         self.update_castle_ability();
         Ok(())
-    }
-
-    pub fn update_occupancy_mask(&mut self) {
-        self.occupancy_mask = self.chess_board.colors[0] | self.chess_board.colors[1];
     }
 
     pub fn update_check_states(&mut self) {
