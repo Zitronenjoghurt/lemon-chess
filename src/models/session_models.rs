@@ -10,20 +10,25 @@ pub struct SessionInfo {
     pub name: String,
     /// Forsyth-Edwards Notation of the current game state
     pub fen: String,
-    /// If the session is finished
-    pub finished: bool,
     pub color_to_move: Color,
+    pub finished: bool,
+    pub winner: Color,
+    pub draw: bool,
 }
 
 impl From<Session> for SessionInfo {
     fn from(session: Session) -> Self {
         let id = session.id.unwrap_or_default();
+        let finished = session.is_finished();
+
         Self {
             id: id.to_string(),
             name: session.name,
             fen: session.game_state.to_fen(),
-            finished: session.finished,
             color_to_move: Color::from(session.game_state.next_to_move as usize),
+            finished,
+            winner: Color::from(session.game_state.winner as usize),
+            draw: session.game_state.draw,
         }
     }
 }

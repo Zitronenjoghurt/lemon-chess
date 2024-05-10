@@ -30,6 +30,9 @@ pub struct GameState {
     king_indices: [u8; 2],
     kingside_rook_indices: [u8; 2],
     queenside_rook_indices: [u8; 2],
+    /// The winner color, 0 = white, 1 = black, 2 = none, set once a player is checkmate
+    pub winner: u8,
+    pub draw: bool,
 }
 
 impl GameState {
@@ -57,6 +60,8 @@ impl GameState {
             king_indices: [4, 60],
             kingside_rook_indices: [7, 63],
             queenside_rook_indices: [0, 56],
+            winner: 2,
+            draw: false,
         };
 
         game_state.update()?;
@@ -221,6 +226,8 @@ impl GameState {
             king_indices: [white_king, black_king],
             kingside_rook_indices: [white_kingside_rook, black_kingside_rook],
             queenside_rook_indices: [white_queenside_rook, black_queenside_rook],
+            winner: 2,
+            draw: false,
         };
 
         state.update()?;
@@ -307,6 +314,7 @@ impl GameState {
         self.update_check_states();
         self.update_legal_moves()?;
         self.update_castle_ability();
+        self.check_end_condition();
         Ok(())
     }
 
@@ -341,5 +349,45 @@ impl GameState {
         self.available_moves[0] = self.get_legal_moves(Color::WHITE)?;
         self.available_moves[1] = self.get_legal_moves(Color::BLACK)?;
         Ok(())
+    }
+
+    pub fn has_no_available_moves(&self, color: Color) -> bool {
+        !self.available_moves[color as usize].has_moves()
+            && !self.can_castle_kingside[color as usize]
+            && !self.can_castle_queenside[color as usize]
+    }
+
+    pub fn is_stalemate(&self, color: Color) -> bool {
+        self.has_no_available_moves(color) && !self.chess_board.is_king_check(color)
+    }
+
+    pub fn is_checkmate(&self, color: Color) -> bool {
+        self.has_no_available_moves(color) && self.chess_board.is_king_check(color)
+    }
+
+    pub fn check_end_condition(&mut self) {
+        // Check for a stalemate
+        let current_color = Color::from(self.next_to_move as usize);
+        if self.is_stalemate(current_color) {
+            self.draw = true;
+            return;
+        }
+
+        // 50-halfmove remis
+        if self.half_move_counter >= 50 {
+            self.draw = true;
+            return;
+        }
+
+        let white_checkmate = self.is_checkmate(Color::WHITE);
+        let black_checkmate = self.is_checkmate(Color::BLACK);
+
+        if white_checkmate && black_checkmate {
+            self.draw = true
+        } else if white_checkmate {
+            self.winner = Color::BLACK as u8
+        } else if black_checkmate {
+            self.winner = Color::WHITE as u8
+        };
     }
 }

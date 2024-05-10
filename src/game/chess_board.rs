@@ -65,6 +65,10 @@ impl AvailableMoves {
             .iter()
             .any(|(f, to_indices)| f == &from && to_indices.contains(&to))
     }
+
+    pub fn has_moves(&self) -> bool {
+        !self.0.is_empty()
+    }
 }
 
 impl ChessBoard {
@@ -441,7 +445,9 @@ impl ChessBoard {
                     valid_targets.push(target_index)
                 }
             }
-            piece_moves.push((index, valid_targets))
+            if !valid_targets.is_empty() {
+                piece_moves.push((index, valid_targets))
+            }
         }
 
         Ok(AvailableMoves(piece_moves))

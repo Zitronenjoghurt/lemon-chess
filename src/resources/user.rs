@@ -15,7 +15,7 @@ use axum::{Json, Router};
 /// NEGOTIATOR ONLY! This endpoint registers a discord user from a given name and discord user id.
 #[utoipa::path(
     post,
-    path = "/user/discord/register",
+    path = "/user/discord",
     params(DiscordUserCreation),
     responses(
         (status = 200, description = "User successfully registered", body = UserApiKey),
@@ -29,7 +29,7 @@ use axum::{Json, Router};
     ),
     tag = "User"
 )]
-async fn post_user_discord_register(
+async fn post_user_discord(
     ExtractUser(user): ExtractUser,
     State(state): State<AppState>,
     query: Query<DiscordUserCreation>,
@@ -43,5 +43,5 @@ async fn post_user_discord_register(
 }
 
 pub fn router() -> Router<AppState> {
-    Router::<AppState>::new().route("/user/discord/register", post(post_user_discord_register))
+    Router::<AppState>::new().route("/user/discord", post(post_user_discord))
 }

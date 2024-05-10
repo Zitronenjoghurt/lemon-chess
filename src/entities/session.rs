@@ -21,7 +21,6 @@ pub struct Session {
     pub keys: [String; 2],
     pub created_stamp: u64,
     pub game_state: GameState,
-    pub finished: bool,
 }
 
 impl Session {
@@ -32,7 +31,6 @@ impl Session {
             keys,
             created_stamp: timestamp_now_nanos(),
             game_state,
-            finished: false,
         }
     }
 
@@ -115,7 +113,7 @@ impl Session {
     }
 
     pub fn can_move(&self, key: String) -> bool {
-        if self.finished || !self.keys.contains(&key) {
+        if self.is_finished() || !self.keys.contains(&key) {
             return false;
         }
 
@@ -145,6 +143,10 @@ impl Session {
         };
 
         Ok(legal_moves)
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.game_state.winner != 2 || self.game_state.draw
     }
 
     pub async fn save(&self, collection: &Collection<Session>) -> Result<(), ApiError> {

@@ -23,7 +23,7 @@ use utoipa::{
         resources::session::get_session,
         resources::session::get_session_move,
         resources::session::post_session_move,
-        resources::user::post_user_discord_register,
+        resources::user::post_user_discord,
     ),
     tags(
         (name = "Misc", description = "Miscellaneous endpoints"),
