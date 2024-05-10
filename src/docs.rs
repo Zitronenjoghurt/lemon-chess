@@ -21,6 +21,7 @@ use utoipa::{
     paths(
         resources::ping::get_ping,
         resources::session::get_session,
+        resources::session::get_session_render,
         resources::session::get_session_move,
         resources::session::post_session_move,
         resources::user::post_user_discord,

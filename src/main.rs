@@ -10,6 +10,7 @@ mod docs;
 pub mod error;
 
 pub mod entities {
+    pub mod room;
     pub mod session;
     pub mod user;
 }

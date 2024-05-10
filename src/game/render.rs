@@ -1,8 +1,8 @@
-use image::imageops::FilterType;
+use image::{imageops::FilterType, ImageBuffer};
 
 use super::{color::Color, piece::Piece, state::GameState};
 
-pub fn render(state: GameState) -> image::ImageResult<()> {
+pub fn render(state: GameState) -> image::ImageResult<ImageBuffer<image::Rgba<u16>, Vec<u16>>> {
     let mut board = image::open("src/assets/board.png")?.to_rgba16();
 
     for index in (0..64).rev() {
@@ -29,10 +29,7 @@ pub fn render(state: GameState) -> image::ImageResult<()> {
         FilterType::Nearest,
     );
 
-    // Save the final image
-    upscaled_image.save("final_chess_board.png")?;
-
-    Ok(())
+    Ok(upscaled_image)
 }
 
 // oben links => 7, -2
