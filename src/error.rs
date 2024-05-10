@@ -14,6 +14,7 @@ pub enum ApiError {
     NoPermission(String),
     NotFound(String),
     ParseError(String),
+    RateLimited(u64),
     SerializationError(String),
 }
 
@@ -71,6 +72,10 @@ impl IntoResponse for ApiError {
             ApiError::NoPermission(message) => (StatusCode::FORBIDDEN, message),
             ApiError::NotFound(message) => (StatusCode::NOT_FOUND, message),
             ApiError::ParseError(message) => (StatusCode::BAD_REQUEST, message),
+            ApiError::RateLimited(time_left_nanos) => (
+                StatusCode::TOO_MANY_REQUESTS,
+                format!("Cooldown: {}nanos", time_left_nanos),
+            ),
         };
 
         (status, error_message).into_response()

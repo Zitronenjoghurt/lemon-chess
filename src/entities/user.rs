@@ -28,6 +28,8 @@ pub struct User {
     #[serde(default)]
     /// If user was added through a negotiator via discord, this is the discord user id
     pub discord_id: String,
+    #[serde(default)]
+    pub rate_limiting: HashMap<String, u64>,
 }
 
 impl User {
@@ -67,11 +69,32 @@ impl User {
             last_access_stamp: current_stamp,
             endpoint_usage: HashMap::new(),
             discord_id: id.to_string(),
+            rate_limiting: HashMap::new(),
         };
 
         user.save(collection).await?;
 
         Ok(user)
+    }
+
+    pub async fn rate_limit(
+        &mut self,
+        collection: &Collection<User>,
+        id: &str,
+        cooldown_s: u64,
+    ) -> Result<(), ApiError> {
+        let current_stamp = timestamp_now_nanos();
+        let cooldown = cooldown_s * 1000000000;
+        match self.rate_limiting.get(id) {
+            Some(&last_access_stamp) if current_stamp < last_access_stamp + cooldown => Err(
+                ApiError::RateLimited(last_access_stamp + cooldown - current_stamp),
+            ),
+            _ => {
+                self.rate_limiting.insert(id.to_string(), current_stamp);
+                self.save(collection).await?;
+                Ok(())
+            }
+        }
     }
 
     pub async fn save(&self, collection: &Collection<User>) -> Result<(), ApiError> {

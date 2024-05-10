@@ -43,7 +43,7 @@ async fn get_session(
     Json(SessionInfo::from(session)).into_response()
 }
 
-/// Retrieve chess board image.
+/// Retrieve chess board image (10s cooldown).
 ///
 /// This endpoint renders the chess board and returns an image.
 #[utoipa::path(
@@ -54,6 +54,7 @@ async fn get_session(
         (status = 400, description = "Missing or invalid session id"),
         (status = 401, description = "Invalid API Key"),
         (status = 404, description = "Session not found"),
+        (status = 429, description = "Rate limited"),
         (status = 500, description = "Server error"),
     ),
     params(
@@ -65,10 +66,13 @@ async fn get_session(
     tag = "Session"
 )]
 async fn get_session_render(
-    ExtractUser(_): ExtractUser,
+    ExtractUser(mut user): ExtractUser,
     ExtractSession(session): ExtractSession,
-) -> Response {
-    match render(session.game_state).map(DynamicImage::ImageRgba16) {
+    State(state): State<AppState>,
+) -> Result<Response, ApiError> {
+    user.rate_limit(&state.database.user_collection, "render", 10)
+        .await?;
+    let response = match render(session.game_state).map(DynamicImage::ImageRgba16) {
         Ok(image) => {
             let mut bytes: Vec<u8> = Vec::new();
             let mut cursor = Cursor::new(&mut bytes);
@@ -91,7 +95,8 @@ async fn get_session_render(
             "Failed to render image.".to_string(),
         )
             .into_response(),
-    }
+    };
+    Ok(response)
 }
 
 /// Retrieve legal session moves.
