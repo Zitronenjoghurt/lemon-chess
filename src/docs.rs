@@ -1,5 +1,7 @@
 use crate::{
+    game::color::Color,
     models::{
+        move_models::LegalMoves,
         response_models::{MessageResponse, UserApiKey},
         session_models::SessionInfo,
     },
@@ -19,6 +21,7 @@ use utoipa::{
     paths(
         resources::ping::get_ping,
         resources::session::get_session,
+        resources::session::get_session_moves,
         resources::user::post_user_discord_register,
     ),
     tags(
@@ -28,7 +31,7 @@ use utoipa::{
     ),
     modifiers(&SecurityAddon),
     components(
-        schemas(MessageResponse, UserApiKey, SessionInfo),
+        schemas(MessageResponse, UserApiKey, SessionInfo, Color, LegalMoves),
     )
 )]
 pub struct ApiDoc;

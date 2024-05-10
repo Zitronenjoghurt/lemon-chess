@@ -32,6 +32,7 @@ pub mod game {
 
 pub mod models {
     pub mod enums;
+    pub mod move_models;
     pub mod query_models;
     pub mod response_models;
     pub mod session_models;

@@ -1,4 +1,7 @@
-#[derive(Debug, PartialEq, Clone, Copy)]
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, ToSchema)]
 pub enum Color {
     WHITE = 0,
     BLACK = 1,

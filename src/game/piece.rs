@@ -165,7 +165,7 @@ impl Piece {
                 BitBoard(u64::MAX),
                 64,
             );
-            masks[piece_id] = threat_mask;
+            masks[piece as usize] = threat_mask;
         }
 
         masks

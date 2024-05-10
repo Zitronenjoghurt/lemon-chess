@@ -59,6 +59,12 @@ impl AvailableMoves {
         let notation_moves = moves.into_iter().map(String::from).collect();
         Ok(notation_moves)
     }
+
+    pub fn has_move(&self, from: u8, to: u8) -> bool {
+        self.0
+            .iter()
+            .any(|(f, to_indices)| f == &from && to_indices.contains(&to))
+    }
 }
 
 impl ChessBoard {
@@ -484,9 +490,9 @@ impl ChessBoard {
         let threat_masks = Piece::get_king_threat_masks(king_index, color, block_mask);
 
         let mut check_positions: Vec<u8> = Vec::new();
-        for i in 0..6 {
+        for (i, threat_mask) in threat_masks.iter().enumerate() {
             let threats =
-                threat_masks[i] & self.pieces[i] & self.colors[color.opponent_color() as usize];
+                *threat_mask & self.pieces[i] & self.colors[color.opponent_color() as usize];
             check_positions.extend(threats.get_bits());
         }
         check_positions

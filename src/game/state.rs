@@ -9,7 +9,7 @@ use super::{
 pub struct GameState {
     pub chess_board: ChessBoard,
     /// Next to move, 0 = white, 1 = black
-    next_to_move: u8,
+    pub next_to_move: u8,
     half_move_counter: u8,
     full_move_counter: u8,
     /// Initial pawn locations by color, 0 = white, 1 = black
@@ -24,8 +24,8 @@ pub struct GameState {
     kingside_castling_rights: [bool; 2],
     queenside_castling_rights: [bool; 2],
     /// Castle abilities by color
-    can_castle_kingside: [bool; 2],
-    can_castle_queenside: [bool; 2],
+    pub can_castle_kingside: [bool; 2],
+    pub can_castle_queenside: [bool; 2],
     /// Rook & king positions by color
     king_indices: [u8; 2],
     kingside_rook_indices: [u8; 2],

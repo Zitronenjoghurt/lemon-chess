@@ -4,6 +4,8 @@ use axum::{
 };
 use std::fmt;
 
+use crate::game::error::GameError;
+
 #[derive(Debug)]
 pub enum ApiError {
     AuthorizationError(String),
@@ -11,6 +13,7 @@ pub enum ApiError {
     DatabaseError(String),
     NoPermission(String),
     NotFound(String),
+    ParseError(String),
     SerializationError(String),
 }
 
@@ -38,6 +41,17 @@ impl From<mongodb::bson::oid::Error> for ApiError {
     }
 }
 
+impl From<GameError> for ApiError {
+    fn from(error: GameError) -> Self {
+        match error {
+            GameError::DecodingError(message) => Self::ParseError(message),
+            GameError::EncodingError(message) => Self::ParseError(message),
+            GameError::ParseError(message) => Self::ParseError(message),
+            GameError::ValidationError(message) => Self::BadRequest(message),
+        }
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
@@ -56,6 +70,7 @@ impl IntoResponse for ApiError {
             ApiError::BadRequest(message) => (StatusCode::BAD_REQUEST, message),
             ApiError::NoPermission(message) => (StatusCode::FORBIDDEN, message),
             ApiError::NotFound(message) => (StatusCode::NOT_FOUND, message),
+            ApiError::ParseError(message) => (StatusCode::BAD_REQUEST, message),
         };
 
         (status, error_message).into_response()

@@ -6,7 +6,12 @@ use mongodb::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ApiError, game::state::GameState, utils::time_operations::timestamp_now_nanos};
+use crate::{
+    error::ApiError,
+    game::{color::Color, state::GameState},
+    models::move_models::{LegalMoves, MoveQuery},
+    utils::time_operations::timestamp_now_nanos,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct Session {
@@ -16,6 +21,7 @@ pub struct Session {
     pub keys: [String; 2],
     pub created_stamp: u64,
     pub game_state: GameState,
+    pub finished: bool,
 }
 
 impl Session {
@@ -26,7 +32,82 @@ impl Session {
             keys,
             created_stamp: timestamp_now_nanos(),
             game_state,
+            finished: false,
         }
+    }
+
+    pub fn do_move(&self, key: String, chess_move: MoveQuery) -> Result<(), ApiError> {
+        todo!()
+    }
+
+    pub fn get_color_from_key(&self, key: String) -> Option<Color> {
+        if key == self.keys[0] {
+            Some(Color::WHITE)
+        } else if key == self.keys[1] {
+            Some(Color::BLACK)
+        } else {
+            None
+        }
+    }
+
+    pub fn is_move_possible(&self, key: String, chess_move: MoveQuery) -> Result<bool, ApiError> {
+        let color = match self.get_color_from_key(key) {
+            Some(color) => color,
+            None => return Ok(false),
+        };
+
+        let (from, to, kingside_castle, queenside_castle) = chess_move.convert_to_move()?;
+
+        if kingside_castle && queenside_castle {
+            return Ok(false);
+        }
+
+        if kingside_castle && !self.game_state.can_castle_kingside[color as usize] {
+            return Ok(false);
+        }
+
+        if queenside_castle && !self.game_state.can_castle_queenside[color as usize] {
+            return Ok(false);
+        }
+
+        if !self.game_state.available_moves[color as usize].has_move(from, to) {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
+    pub fn can_move(&self, key: String) -> bool {
+        if self.finished || !self.keys.contains(&key) {
+            return false;
+        }
+
+        let color = match self.get_color_from_key(key) {
+            Some(color) => color,
+            None => return false,
+        };
+
+        self.game_state.next_to_move == color as u8
+    }
+
+    pub fn get_legal_moves(&self, color: Color) -> Result<LegalMoves, ApiError> {
+        let available_moves = &self.game_state.available_moves[color as usize];
+        let moves = available_moves.get_moves()?;
+
+        let mut move_pairs: Vec<(String, String)> = Vec::new();
+        for m in moves {
+            move_pairs.push((m.0.as_str(), m.1.as_str()));
+        }
+
+        let legal_moves = LegalMoves {
+            color,
+            cells: move_pairs,
+            current_turn: color as u8 == self.game_state.next_to_move,
+            castle_kingside: self.game_state.can_castle_kingside[color as usize],
+            castle_queenside: self.game_state.can_castle_queenside[color as usize],
+        };
+
+        Ok(legal_moves)
     }
 
     pub async fn save(&self, collection: &Collection<Session>) -> Result<(), ApiError> {
