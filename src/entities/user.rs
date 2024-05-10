@@ -30,6 +30,8 @@ pub struct User {
     pub discord_id: String,
     #[serde(default)]
     pub rate_limiting: HashMap<String, u64>,
+    #[serde(default)]
+    pub in_auto_queue: bool,
 }
 
 impl User {
@@ -70,6 +72,7 @@ impl User {
             endpoint_usage: HashMap::new(),
             discord_id: id.to_string(),
             rate_limiting: HashMap::new(),
+            in_auto_queue: false,
         };
 
         user.save(collection).await?;
@@ -149,6 +152,12 @@ pub async fn find_user_by_discord_id(
     discord_id: &str,
 ) -> Result<Option<User>, ApiError> {
     let filter = doc! { "discord_id": discord_id };
+    let user = collection.find_one(Some(filter), None).await?;
+    Ok(user)
+}
+
+pub async fn find_autoqueue_user(collection: &Collection<User>) -> Result<Option<User>, ApiError> {
+    let filter = doc! { "in_auto_queue": true };
     let user = collection.find_one(Some(filter), None).await?;
     Ok(user)
 }

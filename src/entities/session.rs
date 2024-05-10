@@ -1,7 +1,7 @@
 use futures::TryStreamExt;
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
-    options::{InsertOneOptions, UpdateOptions},
+    options::{FindOptions, InsertOneOptions, UpdateOptions},
     Collection,
 };
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::ApiError,
     game::{color::Color, state::GameState},
-    models::move_models::{LegalMoves, MoveQuery},
+    models::{
+        move_models::{LegalMoves, MoveQuery},
+        response_models::{Pagination, SessionList},
+        session_models::SessionInfo,
+    },
     utils::time_operations::timestamp_now_nanos,
 };
 
@@ -180,6 +184,32 @@ pub async fn find_sessions_by_key(
     let cursor = collection.find(filter, None).await?;
     let sessions: Vec<Session> = cursor.try_collect().await?;
     Ok(sessions)
+}
+
+pub async fn find_sessions_by_key_with_pagination(
+    collection: &Collection<Session>,
+    key: String,
+    page: u32,
+    page_size: u32,
+) -> Result<SessionList, ApiError> {
+    let offset = Pagination::get_offset(page, page_size);
+    let find_options = FindOptions::builder()
+        .skip(offset as u64)
+        .limit(page_size as i64)
+        .build();
+    let filter = doc! { "keys": key };
+
+    let total = collection.count_documents(filter.clone(), None).await? as u32;
+
+    let cursor = collection.find(filter, find_options).await?;
+    let sessions: Vec<Session> = cursor.try_collect().await?;
+    let sessions_info: Vec<SessionInfo> = sessions.into_iter().map(SessionInfo::from).collect();
+    let results = sessions_info.len() as u32;
+
+    Ok(SessionList {
+        sessions: sessions_info,
+        pagination: Pagination::generate(results, total, page, page_size),
+    })
 }
 
 pub async fn find_session_by_id(
