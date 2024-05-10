@@ -36,11 +36,48 @@ impl Session {
         }
     }
 
-    pub fn do_move(&self, key: String, chess_move: MoveQuery) -> Result<(), ApiError> {
-        todo!()
+    pub fn do_move(&mut self, key: &str, chess_move: &MoveQuery) -> Result<(), ApiError> {
+        if !self.can_move(key.to_string()) {
+            return Err(ApiError::BadRequest(
+                "You can't move in this game.".to_string(),
+            ));
+        }
+
+        if !self.is_move_possible(key, chess_move)? {
+            return Err(ApiError::BadRequest(
+                "The given move is impossible.".to_string(),
+            ));
+        }
+
+        let color = match self.get_color_from_key(key) {
+            Some(color) => color,
+            None => {
+                return Err(ApiError::BadRequest(
+                    "You can't move in this game.".to_string(),
+                ))
+            }
+        };
+
+        let (from, to, kingside_castle, queenside_castle) = chess_move.convert_to_move()?;
+
+        let success = if kingside_castle {
+            self.game_state.castle_kingside(color)
+        } else if queenside_castle {
+            self.game_state.castle_queenside(color)
+        } else {
+            self.game_state.make_move(from, to)
+        }?;
+
+        if success {
+            Ok(())
+        } else {
+            Err(ApiError::BadRequest(
+                "Unable to play that move.".to_string(),
+            ))
+        }
     }
 
-    pub fn get_color_from_key(&self, key: String) -> Option<Color> {
+    pub fn get_color_from_key(&self, key: &str) -> Option<Color> {
         if key == self.keys[0] {
             Some(Color::WHITE)
         } else if key == self.keys[1] {
@@ -50,7 +87,7 @@ impl Session {
         }
     }
 
-    pub fn is_move_possible(&self, key: String, chess_move: MoveQuery) -> Result<bool, ApiError> {
+    pub fn is_move_possible(&self, key: &str, chess_move: &MoveQuery) -> Result<bool, ApiError> {
         let color = match self.get_color_from_key(key) {
             Some(color) => color,
             None => return Ok(false),
@@ -82,7 +119,7 @@ impl Session {
             return false;
         }
 
-        let color = match self.get_color_from_key(key) {
+        let color = match self.get_color_from_key(&key) {
             Some(color) => color,
             None => return false,
         };
