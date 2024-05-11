@@ -34,6 +34,8 @@ pub struct GameState {
     pub winner: u8,
     pub draw: bool,
     #[serde(default)]
+    pub checkmate: bool,
+    #[serde(default)]
     pub resign: bool,
     #[serde(default)]
     pub stalemate: bool,
@@ -70,6 +72,7 @@ impl GameState {
             queenside_rook_indices: [0, 56],
             winner: 2,
             draw: false,
+            checkmate: false,
             resign: false,
             stalemate: false,
             remis: false,
@@ -240,6 +243,7 @@ impl GameState {
             queenside_rook_indices: [white_queenside_rook, black_queenside_rook],
             winner: 2,
             draw: false,
+            checkmate: false,
             resign: false,
             stalemate: false,
             remis: false,
@@ -404,11 +408,13 @@ impl GameState {
         let black_checkmate = self.is_checkmate(Color::BLACK);
 
         if white_checkmate && black_checkmate {
-            self.draw = true
+            self.draw = true;
         } else if white_checkmate {
-            self.winner = Color::BLACK as u8
+            self.winner = Color::BLACK as u8;
+            self.checkmate = true;
         } else if black_checkmate {
-            self.winner = Color::WHITE as u8
+            self.winner = Color::WHITE as u8;
+            self.checkmate = true;
         };
     }
 }
