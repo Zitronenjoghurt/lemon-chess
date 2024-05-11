@@ -46,6 +46,7 @@ pub mod resources {
 }
 
 pub mod utils {
+    pub mod random;
     pub mod sanitize;
     pub mod time_operations;
 }

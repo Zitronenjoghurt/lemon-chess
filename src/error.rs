@@ -16,6 +16,7 @@ pub enum ApiError {
     ParseError(String),
     RateLimited(u64),
     SerializationError(String),
+    ServerError(String),
 }
 
 impl fmt::Display for ApiError {
@@ -76,6 +77,7 @@ impl IntoResponse for ApiError {
                 StatusCode::TOO_MANY_REQUESTS,
                 format!("Cooldown: {}nanos", time_left_nanos),
             ),
+            ApiError::ServerError(message) => (StatusCode::INTERNAL_SERVER_ERROR, message),
         };
 
         (status, error_message).into_response()

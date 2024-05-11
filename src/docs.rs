@@ -25,7 +25,6 @@ use utoipa::{
         resources::session::get_session_render,
         resources::session::get_session_move,
         resources::session::post_session_move,
-        resources::session::post_session_queue,
         resources::user::post_user_discord,
     ),
     tags(

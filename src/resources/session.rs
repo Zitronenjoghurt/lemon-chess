@@ -1,13 +1,9 @@
-use std::io::Cursor;
-
-use crate::entities::session::{find_sessions_by_key_with_pagination, Session};
-use crate::entities::user::find_autoqueue_user;
+use crate::entities::session::find_sessions_by_key_with_pagination;
 use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
 use crate::extractors::session_extractor::ExtractSession;
 use crate::game::color::Color;
 use crate::game::render::render;
-use crate::game::state::GameState;
 use crate::models::move_models::MoveQuery;
 use crate::models::query_models::PaginationQuery;
 use crate::models::session_models::SessionInfo;
@@ -19,6 +15,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::{routing::get, Json, Router};
 use image::DynamicImage;
+use std::io::Cursor;
 
 /// Retrieve session information.
 ///
@@ -220,55 +217,6 @@ async fn post_session_move(
     Ok(Json(SessionInfo::from(session)).into_response())
 }
 
-/// Join public random queue.
-///
-/// This endpoint will queue you into the auto queue.
-#[utoipa::path(
-    post,
-    path = "/session/queue",
-    responses(
-        (status = 204, description = "Joined public queue and waiting for partner"),
-        (status = 400, description = "Already in auto queue"),
-        (status = 401, description = "Invalid API Key"),
-        (status = 404, description = "Session not found"),
-        (status = 500, description = "Server error"),
-    ),
-    security(
-        ("api_key" = [])
-    ),
-    tag = "Session"
-)]
-async fn post_session_queue(
-    ExtractUser(mut user): ExtractUser,
-    State(state): State<AppState>,
-) -> Result<Response, ApiError> {
-    if user.in_auto_queue {
-        return Err(ApiError::BadRequest("Already in auto queue".to_string()));
-    }
-
-    let mut target = match find_autoqueue_user(&state.database.user_collection).await? {
-        Some(target) => target,
-        None => {
-            user.in_auto_queue = true;
-            user.save(&state.database.user_collection).await?;
-            return Ok((StatusCode::NO_CONTENT).into_response());
-        }
-    };
-
-    let game_state = GameState::new()?;
-    let session = Session::new(
-        format!("{} vs {}", target.display_name, user.display_name),
-        [target.key.clone(), user.key],
-        game_state,
-    );
-
-    target.in_auto_queue = false;
-    target.save(&state.database.user_collection).await?;
-    session.save(&state.database.session_collection).await?;
-
-    Ok((StatusCode::NO_CONTENT).into_response())
-}
-
 pub fn router() -> Router<AppState> {
     Router::<AppState>::new()
         .route("/session", get(get_session))
@@ -276,5 +224,4 @@ pub fn router() -> Router<AppState> {
         .route("/session/render", get(get_session_render))
         .route("/session/move", get(get_session_move))
         .route("/session/move", post(post_session_move))
-        .route("/session/queue", post(post_session_queue))
 }
