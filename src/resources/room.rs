@@ -12,7 +12,7 @@ use crate::models::session_models::SessionInfo;
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use rand::Rng;
 
@@ -71,6 +71,43 @@ async fn post_room(
     let info = RoomInfo::from_room(&state, room).await?;
 
     Ok(Json(info).into_response())
+}
+
+/// Close a room.
+///
+/// This endpoint allows you to close one of your multiplayer rooms.
+#[utoipa::path(
+    delete,
+    path = "/room",
+    params(RoomCode),
+    responses(
+        (status = 200, description = "Room successfully deleted"),
+        (status = 400, description = "Not your room"),
+        (status = 401, description = "Invalid API Key"),
+        (status = 404, description = "Room not found"),
+        (status = 500, description = "Server error"),
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Room"
+)]
+async fn delete_room(
+    ExtractUser(user): ExtractUser,
+    State(state): State<AppState>,
+    query: Query<RoomCode>,
+) -> Result<Response, ApiError> {
+    let room = match find_room_by_code(&state.database.room_collection, &query.code).await? {
+        Some(room) => room,
+        None => return Err(ApiError::NotFound("Room not found".to_string())),
+    };
+
+    if user.key != room.key {
+        return Err(ApiError::BadRequest("This is not your room".to_string()));
+    }
+
+    delete_room_by_code(&state.database.room_collection, &query.code).await?;
+    Ok(Json("Room closed").into_response())
 }
 
 /// Join a room.
@@ -190,6 +227,7 @@ async fn get_rooms_public(
 pub fn router() -> Router<AppState> {
     Router::<AppState>::new()
         .route("/room", post(post_room))
+        .route("/room", delete(delete_room))
         .route("/room/join", post(post_room_join))
         .route("/rooms", get(get_rooms))
         .route("/rooms/public", get(get_rooms_public))

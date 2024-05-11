@@ -63,6 +63,6 @@ impl RoomCreation {
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct RoomCode {
-    /// The code of the room you want to join
+    /// The code of the room
     pub code: String,
 }
