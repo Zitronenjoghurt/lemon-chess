@@ -102,19 +102,19 @@ impl Session {
             return Ok(false);
         }
 
-        if kingside_castle && !self.game_state.can_castle_kingside[color as usize] {
-            return Ok(false);
+        if kingside_castle && self.game_state.can_castle_kingside[color as usize] {
+            return Ok(true);
         }
 
-        if queenside_castle && !self.game_state.can_castle_queenside[color as usize] {
-            return Ok(false);
+        if queenside_castle && self.game_state.can_castle_queenside[color as usize] {
+            return Ok(true);
         }
 
-        if !self.game_state.available_moves[color as usize].has_move(from, to) {
-            return Ok(false);
+        if self.game_state.available_moves[color as usize].has_move(from, to) {
+            return Ok(true);
         }
 
-        Ok(true)
+        Ok(false)
     }
 
     pub fn can_move(&self, key: String) -> bool {
