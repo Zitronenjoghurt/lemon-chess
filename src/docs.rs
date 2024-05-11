@@ -3,7 +3,7 @@ use crate::{
     models::{
         move_models::LegalMoves,
         response_models::{MessageResponse, Pagination, UserApiKey},
-        room_models::RoomInfo,
+        room_models::{RoomInfo, RoomList},
         session_models::{SessionInfo, SessionList},
     },
     resources,
@@ -23,6 +23,8 @@ use utoipa::{
         resources::ping::get_ping,
         resources::room::post_room,
         resources::room::post_room_join,
+        resources::room::get_rooms,
+        resources::room::get_rooms_public,
         resources::session::get_session,
         resources::session::get_sessions,
         resources::session::get_session_render,
@@ -38,7 +40,7 @@ use utoipa::{
     ),
     modifiers(&SecurityAddon),
     components(
-        schemas(MessageResponse, UserApiKey, SessionInfo, Color, LegalMoves, SessionList, Pagination, RoomInfo),
+        schemas(MessageResponse, UserApiKey, SessionInfo, Color, LegalMoves, SessionList, Pagination, RoomInfo, RoomList),
     )
 )]
 pub struct ApiDoc;

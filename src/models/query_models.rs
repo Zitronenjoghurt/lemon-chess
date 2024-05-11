@@ -30,6 +30,11 @@ impl PaginationQuery {
             page_size: clamped_page_size,
         }
     }
+
+    pub fn retrieve(&self) -> (u32, u32) {
+        let query = self.sanitize();
+        (query.page.unwrap_or(1), query.page_size.unwrap_or(10))
+    }
 }
 
 #[derive(Deserialize, IntoParams)]

@@ -1,15 +1,18 @@
-use crate::entities::room::{delete_room_by_code, find_room_by_code, find_rooms_by_key, Room};
+use crate::entities::room::{
+    delete_room_by_code, find_public_rooms_with_pagination, find_room_by_code, find_rooms_by_key,
+    find_rooms_by_key_with_pagination, Room,
+};
 use crate::entities::session::{find_sessions_by_key_and_finished, Session};
 use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
 use crate::game::state::GameState;
-use crate::models::query_models::{RoomCode, RoomCreation};
+use crate::models::query_models::{PaginationQuery, RoomCode, RoomCreation};
 use crate::models::room_models::RoomInfo;
 use crate::models::session_models::SessionInfo;
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use rand::Rng;
 
@@ -24,8 +27,6 @@ use rand::Rng;
         (status = 200, description = "Room successfully created", body = RoomInfo),
         (status = 400, description = "Session limit reached"),
         (status = 401, description = "Invalid API Key"),
-        (status = 403, description = "No permission to use this endpoint"),
-        (status = 429, description = "Rate limited"),
         (status = 500, description = "Server error"),
     ),
     security(
@@ -83,8 +84,8 @@ async fn post_room(
         (status = 200, description = "Game started", body = SessionInfo),
         (status = 400, description = "Unable to join room"),
         (status = 401, description = "Invalid API Key"),
-        (status = 403, description = "No permission to use this endpoint"),
         (status = 404, description = "Room not found"),
+        (status = 429, description = "Rate limited"),
         (status = 500, description = "Server error"),
     ),
     security(
@@ -132,8 +133,64 @@ async fn post_room_join(
     Ok(Json(info).into_response())
 }
 
+/// Retrieve your rooms.
+///
+/// This endpoint retrieves rooms you have created.
+#[utoipa::path(
+    get,
+    path = "/rooms",
+    params(PaginationQuery),
+    responses(
+        (status = 200, description = "Rooms you have created", body = RoomList),
+        (status = 401, description = "Invalid API Key"),
+        (status = 500, description = "Server error"),
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Room"
+)]
+async fn get_rooms(
+    ExtractUser(user): ExtractUser,
+    State(state): State<AppState>,
+    pagination: Query<PaginationQuery>,
+) -> Result<Response, ApiError> {
+    let (page, page_size) = pagination.retrieve();
+    let rooms = find_rooms_by_key_with_pagination(&state, &user.key, page, page_size).await?;
+    Ok(Json(rooms).into_response())
+}
+
+/// Retrieve public rooms.
+///
+/// This endpoint retrieves publicly available rooms.
+#[utoipa::path(
+    get,
+    path = "/rooms/public",
+    params(PaginationQuery),
+    responses(
+        (status = 200, description = "Public rooms", body = RoomList),
+        (status = 401, description = "Invalid API Key"),
+        (status = 500, description = "Server error"),
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Room"
+)]
+async fn get_rooms_public(
+    ExtractUser(_): ExtractUser,
+    State(state): State<AppState>,
+    pagination: Query<PaginationQuery>,
+) -> Result<Response, ApiError> {
+    let (page, page_size) = pagination.retrieve();
+    let rooms = find_public_rooms_with_pagination(&state, page, page_size).await?;
+    Ok(Json(rooms).into_response())
+}
+
 pub fn router() -> Router<AppState> {
     Router::<AppState>::new()
         .route("/room", post(post_room))
         .route("/room/join", post(post_room_join))
+        .route("/rooms", get(get_rooms))
+        .route("/rooms/public", get(get_rooms_public))
 }

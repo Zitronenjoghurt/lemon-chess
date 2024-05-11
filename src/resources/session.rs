@@ -70,12 +70,9 @@ async fn get_session(
 async fn get_sessions(
     ExtractUser(user): ExtractUser,
     State(state): State<AppState>,
-    query: Query<PaginationQuery>,
+    pagination: Query<PaginationQuery>,
 ) -> Result<Response, ApiError> {
-    let query = query.sanitize();
-    let page = query.page.unwrap_or(1);
-    let page_size = query.page_size.unwrap_or(10);
-
+    let (page, page_size) = pagination.retrieve();
     let session_list =
         find_sessions_by_key_with_pagination(&state, user.key, page, page_size).await?;
 

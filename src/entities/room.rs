@@ -78,6 +78,37 @@ pub async fn find_rooms_by_key(
     Ok(rooms)
 }
 
+pub async fn find_rooms_by_key_with_pagination(
+    state: &AppState,
+    key: &str,
+    page: u32,
+    page_size: u32,
+) -> Result<RoomList, ApiError> {
+    let collection = &state.database.room_collection;
+
+    let offset = Pagination::get_offset(page, page_size);
+    let find_options = FindOptions::builder()
+        .skip(offset as u64)
+        .limit(page_size as i64)
+        .build();
+    let filter = doc! { "key": key };
+
+    let total = collection.count_documents(filter.clone(), None).await? as u32;
+
+    let cursor = collection.find(filter, find_options).await?;
+    let rooms: Vec<Room> = cursor.try_collect().await?;
+    let rooms_info: Vec<RoomInfo> = stream::iter(rooms)
+        .then(|room| RoomInfo::from_room(state, room))
+        .try_collect()
+        .await?;
+    let results = rooms_info.len() as u32;
+
+    Ok(RoomList {
+        rooms: rooms_info,
+        pagination: Pagination::generate(results, total, page, page_size),
+    })
+}
+
 pub async fn find_public_rooms_with_pagination(
     state: &AppState,
     page: u32,

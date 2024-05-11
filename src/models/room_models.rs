@@ -20,6 +20,8 @@ pub struct RoomInfo {
     pub code: String,
     /// UNIX timestamp in nanoseconds when the room was created
     pub created_stamp: u64,
+    /// If the room is publicly visible or not
+    pub public: bool,
 }
 
 impl RoomInfo {
@@ -36,6 +38,7 @@ impl RoomInfo {
             user_name,
             code: room.code,
             created_stamp: room.created_stamp,
+            public: room.public,
         };
 
         Ok(info)
