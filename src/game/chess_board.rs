@@ -554,7 +554,7 @@ impl ChessBoard {
         }
     }
 
-    /// Returns queen and queenside rook index
+    /// Returns king and queenside rook index
     pub fn get_queenside_rook(&self, color: Color) -> Option<(u8, u8)> {
         let king_index = self.get_king_position_by_color(color);
         let rook_board = self.pieces[Piece::ROOK as usize] & self.colors[color as usize];
@@ -601,6 +601,12 @@ impl ChessBoard {
         let opponent_attack_mask = self.get_attack_mask_by_color(color.opponent_color());
         let opponent_attack_indices = opponent_attack_mask.get_bits();
         for cell in rook_influence_cells {
+            if color == Color::BLACK && cell < 56 {
+                continue;
+            }
+            if color == Color::WHITE && cell > 7 {
+                continue;
+            }
             if opponent_attack_indices.contains(&cell) {
                 return false;
             }
