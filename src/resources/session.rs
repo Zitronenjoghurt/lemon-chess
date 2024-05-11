@@ -12,7 +12,7 @@ use axum::body::Body;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{delete, post};
 use axum::{routing::get, Json, Router};
 use image::DynamicImage;
 use std::io::Cursor;
@@ -43,6 +43,48 @@ async fn get_session(
     ExtractSession(session): ExtractSession,
     State(state): State<AppState>,
 ) -> Result<Response, ApiError> {
+    let info = SessionInfo::from_session(&state, session, user.key).await?;
+    Ok(Json(info).into_response())
+}
+
+/// Resign a session.
+///
+/// This endpoint allows you to resign a chess game.
+#[utoipa::path(
+    delete,
+    path = "/session",
+    responses(
+        (status = 200, description = "Session information", body = SessionInfo),
+        (status = 400, description = "Missing/invalid session id or can't resign"),
+        (status = 401, description = "Invalid API Key"),
+        (status = 404, description = "Session not found"),
+        (status = 500, description = "Server error"),
+    ),
+    params(
+        ("session-id" = String, Header, description = "ID of the session"),
+      ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Session"
+)]
+async fn delete_session(
+    ExtractUser(user): ExtractUser,
+    ExtractSession(mut session): ExtractSession,
+    State(state): State<AppState>,
+) -> Result<Response, ApiError> {
+    let color = match session.get_color_from_key(&user.key) {
+        Some(color) => color,
+        None => {
+            return Err(ApiError::BadRequest(
+                "Not a player of this game.".to_string(),
+            ))
+        }
+    };
+
+    session.resign(color)?;
+    session.save(&state.database.session_collection).await?;
+
     let info = SessionInfo::from_session(&state, session, user.key).await?;
     Ok(Json(info).into_response())
 }
@@ -215,6 +257,7 @@ async fn post_session_move(
 pub fn router() -> Router<AppState> {
     Router::<AppState>::new()
         .route("/session", get(get_session))
+        .route("/session", delete(delete_session))
         .route("/sessions", get(get_sessions))
         .route("/session/render", get(get_session_render))
         .route("/session/move", get(get_session_move))

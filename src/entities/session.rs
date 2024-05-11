@@ -154,6 +154,16 @@ impl Session {
         self.game_state.winner != 2 || self.game_state.draw
     }
 
+    pub fn resign(&mut self, color: Color) -> Result<(), ApiError> {
+        if self.is_finished() {
+            return Err(ApiError::BadRequest("Game is already finished".to_string()));
+        }
+
+        self.game_state.winner = color.opponent_color() as u8;
+        self.game_state.resign = true;
+        Ok(())
+    }
+
     pub async fn save(&self, collection: &Collection<Session>) -> Result<(), ApiError> {
         if let Some(id) = &self.id {
             let filter = doc! { "_id": id };
