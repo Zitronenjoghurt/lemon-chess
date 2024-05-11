@@ -39,6 +39,8 @@ pub struct GameState {
     pub stalemate: bool,
     #[serde(default)]
     pub remis: bool,
+    #[serde(default)]
+    pub move_log: Vec<(u8, u8)>,
 }
 
 impl GameState {
@@ -71,6 +73,7 @@ impl GameState {
             resign: false,
             stalemate: false,
             remis: false,
+            move_log: Vec::new(),
         };
 
         game_state.update()?;
@@ -240,6 +243,7 @@ impl GameState {
             resign: false,
             stalemate: false,
             remis: false,
+            move_log: Vec::new(),
         };
 
         state.update()?;
@@ -258,6 +262,9 @@ impl GameState {
         if !success {
             return Ok(false);
         }
+
+        // Log the move
+        self.move_log.push((from, to));
 
         self.update()?;
         self.clock(capture_or_pawn_move);

@@ -43,6 +43,24 @@ impl From<mongodb::bson::oid::Error> for ApiError {
     }
 }
 
+impl From<std::io::Error> for ApiError {
+    fn from(error: std::io::Error) -> Self {
+        ApiError::ServerError(error.to_string())
+    }
+}
+
+impl From<gif::EncodingError> for ApiError {
+    fn from(error: gif::EncodingError) -> Self {
+        ApiError::ServerError(error.to_string())
+    }
+}
+
+impl From<image::ImageError> for ApiError {
+    fn from(error: image::ImageError) -> Self {
+        ApiError::ServerError(error.to_string())
+    }
+}
+
 impl From<GameError> for ApiError {
     fn from(error: GameError) -> Self {
         match error {

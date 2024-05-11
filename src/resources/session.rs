@@ -153,7 +153,7 @@ async fn get_session_render(
     let player_color = session
         .get_color_from_key(&user.key)
         .unwrap_or(Color::WHITE);
-    let response = match render(session.game_state, player_color).map(DynamicImage::ImageRgba16) {
+    let response = match render(&session.game_state, player_color).map(DynamicImage::ImageRgba8) {
         Ok(image) => {
             let mut bytes: Vec<u8> = Vec::new();
             let mut cursor = Cursor::new(&mut bytes);
