@@ -70,7 +70,14 @@ pub fn render_history_gif(game_state: &GameState, color: Color) -> Result<Vec<u8
         encoder.write_frame(&initial_frame)?;
 
         for (i, (from, to)) in game_state.move_log.iter().enumerate() {
-            state.make_move(*from, *to)?;
+            if *from == 64 {
+                state.castle_kingside(Color::from(*to as usize))?;
+            } else if *from == 65 {
+                state.castle_queenside(Color::from(*to as usize))?;
+            } else {
+                state.make_move(*from, *to)?;
+            }
+
             let mut frame_image = render(&state, color)?;
             let mut frame = Frame::from_rgba_speed(568, 568, &mut frame_image, 10);
             frame.dispose = DisposalMethod::Background;

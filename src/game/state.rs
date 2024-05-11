@@ -289,6 +289,9 @@ impl GameState {
         self.kingside_castling_rights[color as usize] = false;
         self.queenside_castling_rights[color as usize] = false;
 
+        // Log the move, 64 stands for kingside castling
+        self.move_log.push((64, color as u8));
+
         self.update()?;
         self.clock(false);
 
@@ -307,6 +310,9 @@ impl GameState {
 
         self.kingside_castling_rights[color as usize] = false;
         self.queenside_castling_rights[color as usize] = false;
+
+        // Log the move, 65 stands for queenside castling
+        self.move_log.push((65, color as u8));
 
         self.update()?;
         self.clock(false);
