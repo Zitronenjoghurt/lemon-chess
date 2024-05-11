@@ -1,4 +1,4 @@
-use crate::entities::{session::Session, user::User};
+use crate::entities::{room::Room, session::Session, user::User};
 use dotenvy::dotenv;
 use mongodb::{error::Result, options::ClientOptions, Client, Collection};
 use std::env;
@@ -8,6 +8,7 @@ pub struct DB {
     pub client: Client,
     pub session_collection: Collection<Session>,
     pub user_collection: Collection<User>,
+    pub room_collection: Collection<Room>,
 }
 
 pub async fn setup() -> Result<DB> {
@@ -21,5 +22,6 @@ pub async fn setup() -> Result<DB> {
         client,
         session_collection: db.collection("sessions"),
         user_collection: db.collection("users"),
+        room_collection: db.collection("rooms"),
     })
 }

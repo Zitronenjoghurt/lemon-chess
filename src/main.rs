@@ -36,11 +36,13 @@ pub mod models {
     pub mod move_models;
     pub mod query_models;
     pub mod response_models;
+    pub mod room_models;
     pub mod session_models;
 }
 
 pub mod resources {
     pub mod ping;
+    pub mod room;
     pub mod session;
     pub mod user;
 }
@@ -64,6 +66,7 @@ async fn main() -> io::Result<()> {
 
     let app = Router::<AppState>::new()
         .nest("/", resources::ping::router())
+        .nest("/", resources::room::router())
         .nest("/", resources::session::router())
         .nest("/", resources::user::router())
         .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", docs::ApiDoc::openapi()))

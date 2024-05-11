@@ -1,3 +1,5 @@
+use rustrict::CensorStr;
+
 pub fn alphanumeric(input: &str) -> String {
     input
         .chars()
@@ -11,4 +13,8 @@ pub fn limit_string(input: &str, size: usize) -> String {
     } else {
         input.to_string()
     }
+}
+
+pub fn profanity(input: &str) -> String {
+    input.censor()
 }

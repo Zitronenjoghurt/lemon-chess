@@ -178,9 +178,20 @@ pub async fn find_session_by_keys(
 
 pub async fn find_sessions_by_key(
     collection: &Collection<Session>,
-    key: String,
+    key: &str,
 ) -> Result<Vec<Session>, ApiError> {
     let filter = doc! { "keys": key};
+    let cursor = collection.find(filter, None).await?;
+    let sessions: Vec<Session> = cursor.try_collect().await?;
+    Ok(sessions)
+}
+
+pub async fn find_sessions_by_key_and_finished(
+    collection: &Collection<Session>,
+    key: &str,
+    finished: bool,
+) -> Result<Vec<Session>, ApiError> {
+    let filter = doc! { "keys": key, "finished": finished};
     let cursor = collection.find(filter, None).await?;
     let sessions: Vec<Session> = cursor.try_collect().await?;
     Ok(sessions)

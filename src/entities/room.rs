@@ -1,14 +1,19 @@
-use futures::TryStreamExt;
+use futures::{stream, StreamExt, TryStreamExt};
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
-    options::{InsertOneOptions, UpdateOptions},
+    options::{FindOptions, InsertOneOptions, UpdateOptions},
     Collection,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::ApiError,
+    models::{
+        response_models::Pagination,
+        room_models::{RoomInfo, RoomList},
+    },
     utils::{random::generate_user_friendly_code, time_operations::timestamp_now_nanos},
+    AppState,
 };
 
 /// A user will create a room, if another person joins the room will be deleted and a session will be started
@@ -65,7 +70,7 @@ impl Room {
 
 pub async fn find_rooms_by_key(
     collection: &Collection<Room>,
-    key: String,
+    key: &str,
 ) -> Result<Vec<Room>, ApiError> {
     let filter = doc! { "key": key};
     let cursor = collection.find(filter, None).await?;
@@ -73,11 +78,34 @@ pub async fn find_rooms_by_key(
     Ok(rooms)
 }
 
-pub async fn find_public_rooms(collection: &Collection<Room>) -> Result<Vec<Room>, ApiError> {
-    let filter = doc! { "public": true};
-    let cursor = collection.find(filter, None).await?;
+pub async fn find_public_rooms_with_pagination(
+    state: &AppState,
+    page: u32,
+    page_size: u32,
+) -> Result<RoomList, ApiError> {
+    let collection = &state.database.room_collection;
+
+    let offset = Pagination::get_offset(page, page_size);
+    let find_options = FindOptions::builder()
+        .skip(offset as u64)
+        .limit(page_size as i64)
+        .build();
+    let filter = doc! { "public": true };
+
+    let total = collection.count_documents(filter.clone(), None).await? as u32;
+
+    let cursor = collection.find(filter, find_options).await?;
     let rooms: Vec<Room> = cursor.try_collect().await?;
-    Ok(rooms)
+    let rooms_info: Vec<RoomInfo> = stream::iter(rooms)
+        .then(|room| RoomInfo::from_room(state, room)) // 'then' is used for async closure
+        .try_collect()
+        .await?;
+    let results = rooms_info.len() as u32;
+
+    Ok(RoomList {
+        rooms: rooms_info,
+        pagination: Pagination::generate(results, total, page, page_size),
+    })
 }
 
 pub async fn find_room_by_code(
