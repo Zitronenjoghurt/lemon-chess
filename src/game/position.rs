@@ -1,4 +1,4 @@
-use super::error::GameError;
+use super::{color::Color, error::GameError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // Prioritizing speed, its faster to just map all 64 coordinates to the respective index
@@ -75,6 +75,18 @@ impl Position {
         let file = b'A' + (index % 8);
         let rank = 1 + (index / 8);
         format!("{}{}", file as char, rank)
+    }
+
+    /// Project the position to the perspective of the given color
+    pub fn project(&self, color: Color) -> Self {
+        match color {
+            Color::WHITE => *self,
+            _ => {
+                let index = *self as u8;
+                let inverted_index = 63 - index;
+                unsafe { std::mem::transmute::<u8, Position>(inverted_index) }
+            }
+        }
     }
 }
 

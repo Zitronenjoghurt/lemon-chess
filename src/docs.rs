@@ -2,8 +2,8 @@ use crate::{
     game::color::Color,
     models::{
         move_models::LegalMoves,
-        response_models::{MessageResponse, Pagination, SessionList, UserApiKey},
-        session_models::SessionInfo,
+        response_models::{MessageResponse, Pagination, UserApiKey},
+        session_models::{SessionInfo, SessionList},
     },
     resources,
 };

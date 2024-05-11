@@ -11,8 +11,8 @@ use crate::{
     game::{color::Color, state::GameState},
     models::{
         move_models::{LegalMoves, MoveQuery},
-        response_models::{Pagination, SessionList},
-        session_models::SessionInfo,
+        response_models::Pagination,
+        session_models::{SessionInfo, SessionList},
     },
     utils::time_operations::timestamp_now_nanos,
 };
@@ -60,7 +60,7 @@ impl Session {
             }
         };
 
-        let (from, to, kingside_castle, queenside_castle) = chess_move.convert_to_move()?;
+        let (from, to, kingside_castle, queenside_castle) = chess_move.convert_to_move(color)?;
 
         let success = if kingside_castle {
             self.game_state.castle_kingside(color)
@@ -95,7 +95,7 @@ impl Session {
             None => return Ok(false),
         };
 
-        let (from, to, kingside_castle, queenside_castle) = chess_move.convert_to_move()?;
+        let (from, to, kingside_castle, queenside_castle) = chess_move.convert_to_move(color)?;
 
         if kingside_castle && queenside_castle {
             return Ok(false);
@@ -131,7 +131,7 @@ impl Session {
 
     pub fn get_legal_moves(&self, color: Color) -> Result<LegalMoves, ApiError> {
         let available_moves = &self.game_state.available_moves[color as usize];
-        let moves = available_moves.get_moves()?;
+        let moves = available_moves.get_moves(color)?;
 
         let mut move_pairs: Vec<(String, String)> = Vec::new();
         for m in moves {

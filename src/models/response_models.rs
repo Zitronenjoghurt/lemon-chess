@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::session_models::SessionInfo;
-
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct MessageResponse {
     pub message: String,
@@ -48,11 +46,4 @@ impl Pagination {
             offset,
         }
     }
-}
-
-/// Your current available sessions
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct SessionList {
-    pub sessions: Vec<SessionInfo>,
-    pub pagination: Pagination,
 }

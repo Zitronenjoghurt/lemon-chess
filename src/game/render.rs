@@ -2,11 +2,20 @@ use image::{imageops::FilterType, ImageBuffer};
 
 use super::{color::Color, piece::Piece, state::GameState};
 
-pub fn render(state: GameState) -> image::ImageResult<ImageBuffer<image::Rgba<u16>, Vec<u16>>> {
+pub fn render(
+    state: GameState,
+    color: Color,
+) -> image::ImageResult<ImageBuffer<image::Rgba<u16>, Vec<u16>>> {
     let mut board = image::open("src/assets/board.png")?.to_rgba16();
 
+    let chess_board = if color == Color::WHITE {
+        state.chess_board
+    } else {
+        state.chess_board.rotate()
+    };
+
     for index in (0..64).rev() {
-        let (piece, color) = state.chess_board.piece_and_color_at_cell(index).unwrap();
+        let (piece, color) = chess_board.piece_and_color_at_cell(index).unwrap();
         if piece == Piece::NONE || color == Color::NONE {
             continue;
         }

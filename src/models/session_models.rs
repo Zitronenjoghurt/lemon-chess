@@ -3,6 +3,8 @@ use utoipa::ToSchema;
 
 use crate::{entities::session::Session, game::color::Color};
 
+use super::response_models::Pagination;
+
 /// Basic session information
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SessionInfo {
@@ -31,4 +33,11 @@ impl From<Session> for SessionInfo {
             draw: session.game_state.draw,
         }
     }
+}
+
+/// Your current available sessions
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct SessionList {
+    pub sessions: Vec<SessionInfo>,
+    pub pagination: Pagination,
 }

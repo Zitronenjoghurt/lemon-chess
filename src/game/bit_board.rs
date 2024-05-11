@@ -187,6 +187,12 @@ impl BitBoard {
         let new_index = ((new_row * 8) + new_col) as u8;
         self.set_bit(new_index);
     }
+
+    pub fn rotate(&self) -> Self {
+        let mut bits = self.0;
+        bits = bits.reverse_bits();
+        BitBoard(bits)
+    }
 }
 
 impl From<Vec<u8>> for BitBoard {

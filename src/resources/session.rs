@@ -5,6 +5,7 @@ use crate::entities::user::find_autoqueue_user;
 use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
 use crate::extractors::session_extractor::ExtractSession;
+use crate::game::color::Color;
 use crate::game::render::render;
 use crate::game::state::GameState;
 use crate::models::move_models::MoveQuery;
@@ -116,7 +117,10 @@ async fn get_session_render(
 ) -> Result<Response, ApiError> {
     user.rate_limit(&state.database.user_collection, "render", 10)
         .await?;
-    let response = match render(session.game_state).map(DynamicImage::ImageRgba16) {
+    let player_color = session
+        .get_color_from_key(&user.key)
+        .unwrap_or(Color::WHITE);
+    let response = match render(session.game_state, player_color).map(DynamicImage::ImageRgba16) {
         Ok(image) => {
             let mut bytes: Vec<u8> = Vec::new();
             let mut cursor = Cursor::new(&mut bytes);

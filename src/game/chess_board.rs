@@ -41,12 +41,12 @@ impl Default for ChessBoard {
 pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
 
 impl AvailableMoves {
-    pub fn get_moves(&self) -> Result<Vec<Move>, GameError> {
+    pub fn get_moves(&self, color: Color) -> Result<Vec<Move>, GameError> {
         let mut moves: Vec<Move> = Vec::new();
         for (from, to_indices) in &self.0 {
             for to in to_indices {
-                let from_position = Position::try_from(*from)?;
-                let to_position = Position::try_from(*to)?;
+                let from_position = Position::try_from(*from)?.project(color);
+                let to_position = Position::try_from(*to)?.project(color);
                 moves.push(Move(from_position, to_position));
             }
         }
@@ -54,8 +54,8 @@ impl AvailableMoves {
         Ok(moves)
     }
 
-    pub fn get_moves_in_notation(&self) -> Result<Vec<String>, GameError> {
-        let moves = self.get_moves()?;
+    pub fn get_moves_in_notation(&self, color: Color) -> Result<Vec<String>, GameError> {
+        let moves = self.get_moves(color)?;
         let notation_moves = moves.into_iter().map(String::from).collect();
         Ok(notation_moves)
     }
@@ -601,6 +601,20 @@ impl ChessBoard {
         }
 
         true
+    }
+
+    pub fn rotate(&self) -> Self {
+        Self {
+            colors: [self.colors[0].rotate(), self.colors[1].rotate()],
+            pieces: [
+                self.pieces[0].rotate(),
+                self.pieces[1].rotate(),
+                self.pieces[2].rotate(),
+                self.pieces[3].rotate(),
+                self.pieces[4].rotate(),
+                self.pieces[5].rotate(),
+            ],
+        }
     }
 }
 
