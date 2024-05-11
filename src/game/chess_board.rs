@@ -370,6 +370,12 @@ impl ChessBoard {
             capture_or_pawn_move = true;
         }
 
+        // Check for queen promotion
+        if source_piece == Piece::PAWN && !(8..=55).contains(&to) {
+            self.pieces[Piece::PAWN as usize].clear_bit(to);
+            self.pieces[Piece::QUEEN as usize].set_bit(to);
+        }
+
         Ok((true, capture_or_pawn_move))
     }
 
