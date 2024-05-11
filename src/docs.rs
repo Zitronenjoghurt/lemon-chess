@@ -22,6 +22,7 @@ use utoipa::{
     paths(
         resources::ping::get_ping,
         resources::room::post_room,
+        resources::room::post_room_join,
         resources::session::get_session,
         resources::session::get_sessions,
         resources::session::get_session_render,

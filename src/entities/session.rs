@@ -1,4 +1,4 @@
-use futures::TryStreamExt;
+use futures::{stream, StreamExt, TryStreamExt};
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
     options::{FindOptions, InsertOneOptions, UpdateOptions},
@@ -15,6 +15,7 @@ use crate::{
         session_models::{SessionInfo, SessionList},
     },
     utils::time_operations::timestamp_now_nanos,
+    AppState,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -198,23 +199,28 @@ pub async fn find_sessions_by_key_and_finished(
 }
 
 pub async fn find_sessions_by_key_with_pagination(
-    collection: &Collection<Session>,
+    state: &AppState,
     key: String,
     page: u32,
     page_size: u32,
 ) -> Result<SessionList, ApiError> {
+    let collection = &state.database.session_collection;
+
     let offset = Pagination::get_offset(page, page_size);
     let find_options = FindOptions::builder()
         .skip(offset as u64)
         .limit(page_size as i64)
         .build();
-    let filter = doc! { "keys": key };
+    let filter = doc! { "keys": &key };
 
     let total = collection.count_documents(filter.clone(), None).await? as u32;
 
     let cursor = collection.find(filter, find_options).await?;
     let sessions: Vec<Session> = cursor.try_collect().await?;
-    let sessions_info: Vec<SessionInfo> = sessions.into_iter().map(SessionInfo::from).collect();
+    let sessions_info: Vec<SessionInfo> = stream::iter(sessions)
+        .then(|session| SessionInfo::from_session(state, session, key.clone()))
+        .try_collect()
+        .await?;
     let results = sessions_info.len() as u32;
 
     Ok(SessionList {

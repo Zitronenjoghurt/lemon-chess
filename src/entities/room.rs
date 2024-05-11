@@ -97,7 +97,7 @@ pub async fn find_public_rooms_with_pagination(
     let cursor = collection.find(filter, find_options).await?;
     let rooms: Vec<Room> = cursor.try_collect().await?;
     let rooms_info: Vec<RoomInfo> = stream::iter(rooms)
-        .then(|room| RoomInfo::from_room(state, room)) // 'then' is used for async closure
+        .then(|room| RoomInfo::from_room(state, room))
         .try_collect()
         .await?;
     let results = rooms_info.len() as u32;
@@ -123,4 +123,13 @@ pub async fn room_code_available(
 ) -> Result<bool, ApiError> {
     let room = find_room_by_code(collection, code).await?;
     Ok(room.is_none())
+}
+
+pub async fn delete_room_by_code(
+    collection: &Collection<Room>,
+    code: &str,
+) -> Result<(), ApiError> {
+    let filter = doc! { "code": code };
+    collection.delete_one(filter, None).await?;
+    Ok(())
 }

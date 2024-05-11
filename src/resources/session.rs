@@ -39,10 +39,12 @@ use std::io::Cursor;
     tag = "Session"
 )]
 async fn get_session(
-    ExtractUser(_): ExtractUser,
+    ExtractUser(user): ExtractUser,
     ExtractSession(session): ExtractSession,
-) -> Response {
-    Json(SessionInfo::from(session)).into_response()
+    State(state): State<AppState>,
+) -> Result<Response, ApiError> {
+    let info = SessionInfo::from_session(&state, session, user.key).await?;
+    Ok(Json(info).into_response())
 }
 
 /// Retrieve your current sessions.
@@ -74,13 +76,8 @@ async fn get_sessions(
     let page = query.page.unwrap_or(1);
     let page_size = query.page_size.unwrap_or(10);
 
-    let session_list = find_sessions_by_key_with_pagination(
-        &state.database.session_collection,
-        user.key,
-        page,
-        page_size,
-    )
-    .await?;
+    let session_list =
+        find_sessions_by_key_with_pagination(&state, user.key, page, page_size).await?;
 
     Ok(Json(session_list).into_response())
 }
@@ -214,7 +211,8 @@ async fn post_session_move(
 ) -> Result<Response, ApiError> {
     session.do_move(&user.key, &query)?;
     session.save(&state.database.session_collection).await?;
-    Ok(Json(SessionInfo::from(session)).into_response())
+    let info = SessionInfo::from_session(&state, session, user.key).await?;
+    Ok(Json(info).into_response())
 }
 
 pub fn router() -> Router<AppState> {

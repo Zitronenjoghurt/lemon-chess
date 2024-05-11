@@ -33,6 +33,12 @@ pub struct GameState {
     /// The winner color, 0 = white, 1 = black, 2 = none, set once a player is checkmate
     pub winner: u8,
     pub draw: bool,
+    #[serde(default)]
+    pub resign: bool,
+    #[serde(default)]
+    pub stalemate: bool,
+    #[serde(default)]
+    pub remis: bool,
 }
 
 impl GameState {
@@ -62,6 +68,9 @@ impl GameState {
             queenside_rook_indices: [0, 56],
             winner: 2,
             draw: false,
+            resign: false,
+            stalemate: false,
+            remis: false,
         };
 
         game_state.update()?;
@@ -228,6 +237,9 @@ impl GameState {
             queenside_rook_indices: [white_queenside_rook, black_queenside_rook],
             winner: 2,
             draw: false,
+            resign: false,
+            stalemate: false,
+            remis: false,
         };
 
         state.update()?;
@@ -370,12 +382,14 @@ impl GameState {
         let current_color = Color::from(self.next_to_move as usize);
         if self.is_stalemate(current_color) {
             self.draw = true;
+            self.stalemate = true;
             return;
         }
 
         // 50-halfmove remis
         if self.half_move_counter >= 50 {
             self.draw = true;
+            self.remis = true;
             return;
         }
 

@@ -1,14 +1,17 @@
-use crate::entities::room::{find_rooms_by_key, Room};
-use crate::entities::session::find_sessions_by_key_and_finished;
+use crate::entities::room::{delete_room_by_code, find_room_by_code, find_rooms_by_key, Room};
+use crate::entities::session::{find_sessions_by_key_and_finished, Session};
 use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
-use crate::models::query_models::RoomCreation;
+use crate::game::state::GameState;
+use crate::models::query_models::{RoomCode, RoomCreation};
 use crate::models::room_models::RoomInfo;
+use crate::models::session_models::SessionInfo;
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::{Json, Router};
+use rand::Rng;
 
 /// Open a new room.
 ///
@@ -22,6 +25,7 @@ use axum::{Json, Router};
         (status = 400, description = "Session limit reached"),
         (status = 401, description = "Invalid API Key"),
         (status = 403, description = "No permission to use this endpoint"),
+        (status = 429, description = "Rate limited"),
         (status = 500, description = "Server error"),
     ),
     security(
@@ -68,6 +72,68 @@ async fn post_room(
     Ok(Json(info).into_response())
 }
 
+/// Join a room.
+///
+/// This endpoint allows you to join a multiplayer room, which automatically creates a session.
+#[utoipa::path(
+    post,
+    path = "/room/join",
+    params(RoomCode),
+    responses(
+        (status = 200, description = "Game started", body = SessionInfo),
+        (status = 400, description = "Unable to join room"),
+        (status = 401, description = "Invalid API Key"),
+        (status = 403, description = "No permission to use this endpoint"),
+        (status = 404, description = "Room not found"),
+        (status = 500, description = "Server error"),
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Room"
+)]
+async fn post_room_join(
+    ExtractUser(mut user): ExtractUser,
+    State(state): State<AppState>,
+    query: Query<RoomCode>,
+) -> Result<Response, ApiError> {
+    // With a 10s delay it takes >400 years to traverse all room codes
+    user.rate_limit(&state.database.user_collection, "join_room", 10)
+        .await?;
+
+    let room = match find_room_by_code(&state.database.room_collection, &query.code).await? {
+        Some(room) => room,
+        None => return Err(ApiError::NotFound("Room not found".to_string())),
+    };
+
+    if room.key == user.key {
+        return Err(ApiError::BadRequest("Can't join your own room".to_string()));
+    }
+
+    // Randomly determine color
+    let random_bool = tokio::task::block_in_place(|| {
+        let mut rng = rand::thread_rng();
+        rng.gen_bool(0.5)
+    });
+    let keys = if random_bool {
+        [user.key.clone(), room.key]
+    } else {
+        [room.key, user.key.clone()]
+    };
+
+    let game_state = GameState::new()?;
+    let session = Session::new(room.name, keys, game_state);
+
+    delete_room_by_code(&state.database.room_collection, &query.code).await?;
+    session.save(&state.database.session_collection).await?;
+
+    let info = SessionInfo::from_session(&state, session, user.key).await?;
+
+    Ok(Json(info).into_response())
+}
+
 pub fn router() -> Router<AppState> {
-    Router::<AppState>::new().route("/room", post(post_room))
+    Router::<AppState>::new()
+        .route("/room", post(post_room))
+        .route("/room/join", post(post_room_join))
 }
