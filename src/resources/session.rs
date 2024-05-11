@@ -3,7 +3,7 @@ use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
 use crate::extractors::session_extractor::ExtractSession;
 use crate::game::color::Color;
-use crate::game::render::{render, render_history_gif};
+use crate::game::render::{render_board_png, render_history_gif};
 use crate::models::move_models::MoveQuery;
 use crate::models::query_models::PaginationQuery;
 use crate::models::session_models::SessionInfo;
@@ -14,8 +14,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, post};
 use axum::{routing::get, Json, Router};
-use image::DynamicImage;
-use std::io::Cursor;
 
 /// Retrieve session information.
 ///
@@ -153,31 +151,18 @@ async fn get_session_render(
     let player_color = session
         .get_color_from_key(&user.key)
         .unwrap_or(Color::WHITE);
-    let response = match render(&session.game_state, player_color).map(DynamicImage::ImageRgba8) {
-        Ok(image) => {
-            let mut bytes: Vec<u8> = Vec::new();
-            let mut cursor = Cursor::new(&mut bytes);
-            if image.write_to(&mut cursor, image::ImageFormat::Png).is_ok() {
-                Response::builder()
-                    .status(StatusCode::OK)
-                    .header("Content-Type", "image/png")
-                    .body(Body::from(bytes))
-                    .unwrap()
-            } else {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to encode image.".to_string(),
-                )
-                    .into_response()
-            }
-        }
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to render image.".to_string(),
-        )
-            .into_response(),
-    };
-    Ok(response)
+
+    match render_board_png(&session.game_state, player_color) {
+        Ok(image_bytes) => Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "image/png")
+            .body(Body::from(image_bytes))
+            .unwrap()),
+        Err(e) => Err(ApiError::ServerError(format!(
+            "Failed to render image: {}",
+            e
+        ))),
+    }
 }
 
 /// Retrieve chess board history (30s cooldown).

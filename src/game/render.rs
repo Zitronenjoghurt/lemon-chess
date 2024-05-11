@@ -1,15 +1,12 @@
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
-use image::{imageops::FilterType, ImageBuffer};
+use image::{DynamicImage, ImageBuffer, Rgba};
 use std::io::Cursor;
 
 use crate::error::ApiError;
 
 use super::{color::Color, piece::Piece, state::GameState};
 
-pub fn render(
-    state: &GameState,
-    color: Color,
-) -> image::ImageResult<ImageBuffer<image::Rgba<u8>, Vec<u8>>> {
+pub fn render(state: &GameState, color: Color) -> Result<Vec<u8>, ApiError> {
     let mut board = image::open("src/assets/board.png")?.to_rgba8();
 
     let chess_board = if color == Color::WHITE {
@@ -39,10 +36,22 @@ pub fn render(
         &board,
         new_dimensions.0,
         new_dimensions.1,
-        FilterType::Nearest,
+        image::imageops::FilterType::Nearest,
     );
 
-    Ok(upscaled_image)
+    Ok(upscaled_image.into_raw())
+}
+
+pub fn render_board_png(game_state: &GameState, color: Color) -> Result<Vec<u8>, ApiError> {
+    let raw_data = render(game_state, color)?;
+    let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(568, 568, raw_data).ok_or(
+        ApiError::ServerError("Failed to create image buffer.".to_string()),
+    )?;
+    let dynamic_image = DynamicImage::ImageRgba8(buffer);
+    let mut png_bytes = Vec::new();
+    let mut cursor = Cursor::new(&mut png_bytes);
+    dynamic_image.write_to(&mut cursor, image::ImageFormat::Png)?;
+    Ok(png_bytes)
 }
 
 pub fn render_history_gif(game_state: &GameState, color: Color) -> Result<Vec<u8>, ApiError> {
@@ -54,16 +63,16 @@ pub fn render_history_gif(game_state: &GameState, color: Color) -> Result<Vec<u8
         encoder.set_repeat(Repeat::Infinite)?;
 
         let mut state = GameState::new()?;
-        let initial_image = render(&state, color)?;
-        let mut initial_frame = Frame::from_rgba_speed(568, 568, &mut initial_image.into_raw(), 10);
+        let mut initial_image = render(&state, color)?;
+        let mut initial_frame = Frame::from_rgba_speed(568, 568, &mut initial_image, 10);
         initial_frame.dispose = DisposalMethod::Background;
         initial_frame.delay = 100;
         encoder.write_frame(&initial_frame)?;
 
         for (i, (from, to)) in game_state.move_log.iter().enumerate() {
             state.make_move(*from, *to)?;
-            let frame_image = render(&state, color)?;
-            let mut frame = Frame::from_rgba_speed(568, 568, &mut frame_image.into_raw(), 10);
+            let mut frame_image = render(&state, color)?;
+            let mut frame = Frame::from_rgba_speed(568, 568, &mut frame_image, 10);
             frame.dispose = DisposalMethod::Background;
 
             frame.delay = if i < game_state.move_log.len() - 1 {
