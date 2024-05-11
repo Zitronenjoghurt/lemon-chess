@@ -1,6 +1,6 @@
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
 use image::{imageops::FilterType, ImageBuffer};
-use std::{fs::File, io::BufWriter};
+use std::io::Cursor;
 
 use crate::error::ApiError;
 
@@ -45,36 +45,37 @@ pub fn render(
     Ok(upscaled_image)
 }
 
-pub fn render_history_gif(game_state: GameState, color: Color) -> Result<(), ApiError> {
-    let file = File::create("output.gif")?;
-    let mut output = BufWriter::new(file);
+pub fn render_history_gif(game_state: &GameState, color: Color) -> Result<Vec<u8>, ApiError> {
+    let mut buffer = Vec::new();
+    let mut cursor = Cursor::new(&mut buffer);
 
-    let mut encoder = Encoder::new(&mut output, 568, 568, &[])?;
-    encoder.set_repeat(Repeat::Infinite)?;
+    {
+        let mut encoder = Encoder::new(&mut cursor, 568, 568, &[])?;
+        encoder.set_repeat(Repeat::Infinite)?;
 
-    let mut state = GameState::new()?;
-    let initial_image = render(&state, color)?;
-    let mut initial_frame = Frame::from_rgba_speed(568, 568, &mut initial_image.into_raw(), 10);
-    initial_frame.dispose = DisposalMethod::Background;
-    initial_frame.delay = 100;
-    encoder.write_frame(&initial_frame)?;
+        let mut state = GameState::new()?;
+        let initial_image = render(&state, color)?;
+        let mut initial_frame = Frame::from_rgba_speed(568, 568, &mut initial_image.into_raw(), 10);
+        initial_frame.dispose = DisposalMethod::Background;
+        initial_frame.delay = 100;
+        encoder.write_frame(&initial_frame)?;
 
-    for (i, (from, to)) in game_state.move_log.iter().enumerate() {
-        state.make_move(*from, *to)?;
-        let frame_image = render(&state, color)?;
-        let mut frame = Frame::from_rgba_speed(568, 568, &mut frame_image.into_raw(), 10);
-        frame.dispose = DisposalMethod::Background;
+        for (i, (from, to)) in game_state.move_log.iter().enumerate() {
+            state.make_move(*from, *to)?;
+            let frame_image = render(&state, color)?;
+            let mut frame = Frame::from_rgba_speed(568, 568, &mut frame_image.into_raw(), 10);
+            frame.dispose = DisposalMethod::Background;
 
-        if i < game_state.move_log.len() - 1 {
-            frame.delay = 100;
-        } else {
-            frame.delay = 500;
+            frame.delay = if i < game_state.move_log.len() - 1 {
+                100
+            } else {
+                500
+            };
+            encoder.write_frame(&frame)?;
         }
-
-        encoder.write_frame(&frame)?;
     }
 
-    Ok(())
+    Ok(buffer)
 }
 
 // oben links => 7, -2

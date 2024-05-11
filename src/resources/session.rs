@@ -3,7 +3,7 @@ use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
 use crate::extractors::session_extractor::ExtractSession;
 use crate::game::color::Color;
-use crate::game::render::render;
+use crate::game::render::{render, render_history_gif};
 use crate::models::move_models::MoveQuery;
 use crate::models::query_models::PaginationQuery;
 use crate::models::session_models::SessionInfo;
@@ -180,6 +180,51 @@ async fn get_session_render(
     Ok(response)
 }
 
+/// Retrieve chess board history (30s cooldown).
+///
+/// This endpoint renders the chess board history and returns a gif.
+#[utoipa::path(
+    get,
+    path = "/session/render/history",
+    responses(
+        (status = 200, description = "Chess board animated GIF", content_type = "image/gif"),
+        (status = 400, description = "Missing/invalid session id or not a player in this session"),
+        (status = 401, description = "Invalid API Key"),
+        (status = 404, description = "Session not found"),
+        (status = 500, description = "Server error"),
+    ),
+    params(
+        ("session-id" = String, Header, description = "ID of the session"),
+      ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Session"
+)]
+async fn get_session_render_history(
+    ExtractUser(mut user): ExtractUser,
+    ExtractSession(session): ExtractSession,
+    State(state): State<AppState>,
+) -> Result<Response, ApiError> {
+    user.rate_limit(&state.database.user_collection, "render_gif", 30)
+        .await?;
+
+    let player_color = session
+        .get_color_from_key(&user.key)
+        .unwrap_or(Color::WHITE);
+
+    match render_history_gif(&session.game_state, player_color) {
+        Ok(gif_bytes) => Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "image/gif")
+            .body(Body::from(gif_bytes))
+            .unwrap()),
+        Err(_) => Err(ApiError::ServerError(
+            "An error occured while rendering the gif".to_string(),
+        )),
+    }
+}
+
 /// Retrieve legal session moves.
 ///
 /// This endpoint returns your legal moves in this session.
@@ -260,6 +305,7 @@ pub fn router() -> Router<AppState> {
         .route("/session", delete(delete_session))
         .route("/sessions", get(get_sessions))
         .route("/session/render", get(get_session_render))
+        .route("/session/render/history", get(get_session_render_history))
         .route("/session/move", get(get_session_move))
         .route("/session/move", post(post_session_move))
 }
