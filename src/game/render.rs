@@ -74,8 +74,10 @@ pub fn render_history_gif(game_state: &GameState, color: Color) -> Result<Vec<u8
                 state.castle_kingside(Color::from(*to as usize))?;
             } else if *from == 65 {
                 state.castle_queenside(Color::from(*to as usize))?;
-            } else {
+            } else if color == Color::WHITE {
                 state.make_move(*from, *to)?;
+            } else {
+                state.make_move(63 - *from, 63 - *to)?;
             }
 
             let mut frame_image = render(&state, color)?;
