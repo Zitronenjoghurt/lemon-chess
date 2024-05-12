@@ -68,6 +68,10 @@ impl BitBoard {
     }
 
     pub fn populate_down(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index < 8 {
+            return;
+        }
+
         let mut current_index = index.wrapping_sub(8);
         for _ in 0..steps {
             if current_index >= 64 {
@@ -82,6 +86,10 @@ impl BitBoard {
     }
 
     pub fn populate_left(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index % 8 == 0 {
+            return;
+        }
+
         let mut current_index = index.wrapping_sub(1);
         for _ in 0..steps {
             self.set_bit(current_index);
@@ -93,6 +101,10 @@ impl BitBoard {
     }
 
     pub fn populate_right(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index % 8 == 7 {
+            return;
+        }
+
         let mut current_index = index + 1;
         for _ in 0..steps {
             self.set_bit(current_index);
@@ -104,6 +116,10 @@ impl BitBoard {
     }
 
     pub fn populate_up_right(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index % 8 == 7 {
+            return;
+        }
+
         let mut current_index = index + 9;
         for _ in 0..steps {
             if current_index >= 64 {
@@ -118,6 +134,10 @@ impl BitBoard {
     }
 
     pub fn populate_up_left(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index % 8 == 0 {
+            return;
+        }
+
         let mut current_index = index + 7;
         for _ in 0..steps {
             if current_index >= 64 {
@@ -132,6 +152,10 @@ impl BitBoard {
     }
 
     pub fn populate_down_right(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index % 8 == 7 || index < 8 {
+            return;
+        }
+
         let mut current_index = index.wrapping_sub(7);
         for _ in 0..steps {
             if current_index >= 64 {
@@ -146,6 +170,10 @@ impl BitBoard {
     }
 
     pub fn populate_down_left(&mut self, index: u8, steps: u8, block_mask: BitBoard) {
+        if index % 8 == 0 || index < 8 {
+            return;
+        }
+
         let mut current_index = index.wrapping_sub(9);
         for _ in 0..steps {
             if current_index >= 64 {
