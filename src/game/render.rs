@@ -7,7 +7,11 @@ use crate::error::ApiError;
 use super::{color::Color, piece::Piece, state::GameState};
 
 pub fn render(state: &GameState, color: Color) -> Result<Vec<u8>, ApiError> {
-    let mut board = image::open("src/assets/board.png")?.to_rgba8();
+    let mut board = if color == Color::WHITE {
+        image::open("src/assets/board_white.png")?.to_rgba8()
+    } else {
+        image::open("src/assets/board_black.png")?.to_rgba8()
+    };
 
     let chess_board = if color == Color::WHITE {
         state.chess_board.clone()
@@ -74,10 +78,8 @@ pub fn render_history_gif(game_state: &GameState, color: Color) -> Result<Vec<u8
                 state.castle_kingside(Color::from(*to as usize))?;
             } else if *from == 65 {
                 state.castle_queenside(Color::from(*to as usize))?;
-            } else if color == Color::WHITE {
-                state.make_move(*from, *to)?;
             } else {
-                state.make_move(63 - *from, 63 - *to)?;
+                state.make_move(*from, *to)?;
             }
 
             let mut frame_image = render(&state, color)?;

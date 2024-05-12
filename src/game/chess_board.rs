@@ -41,12 +41,12 @@ impl Default for ChessBoard {
 pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
 
 impl AvailableMoves {
-    pub fn get_moves(&self, color: Color) -> Result<Vec<Move>, GameError> {
+    pub fn get_moves(&self) -> Result<Vec<Move>, GameError> {
         let mut moves: Vec<Move> = Vec::new();
         for (from, to_indices) in &self.0 {
             for to in to_indices {
-                let from_position = Position::try_from(*from)?.project(color);
-                let to_position = Position::try_from(*to)?.project(color);
+                let from_position = Position::try_from(*from)?;
+                let to_position = Position::try_from(*to)?;
                 moves.push(Move(from_position, to_position));
             }
         }
@@ -54,8 +54,8 @@ impl AvailableMoves {
         Ok(moves)
     }
 
-    pub fn get_moves_in_notation(&self, color: Color) -> Result<Vec<String>, GameError> {
-        let moves = self.get_moves(color)?;
+    pub fn get_moves_in_notation(&self) -> Result<Vec<String>, GameError> {
+        let moves = self.get_moves()?;
         let notation_moves = moves.into_iter().map(String::from).collect();
         Ok(notation_moves)
     }

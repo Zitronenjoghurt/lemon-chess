@@ -16,7 +16,7 @@ pub struct MoveQuery {
 }
 
 impl MoveQuery {
-    pub fn convert_to_move(&self, color: Color) -> Result<(u8, u8, bool, bool), ApiError> {
+    pub fn convert_to_move(&self) -> Result<(u8, u8, bool, bool), ApiError> {
         if self.castle_kingside == Some(true) {
             return Ok((0, 0, true, false));
         }
@@ -26,7 +26,7 @@ impl MoveQuery {
         }
 
         let from = match self.from.clone() {
-            Some(from_str) => Position::try_from(from_str)?.project(color) as u8,
+            Some(from_str) => Position::try_from(from_str)? as u8,
             None => {
                 return Err(ApiError::BadRequest(
                     "Move needs a specified starting cell".to_string(),
@@ -35,7 +35,7 @@ impl MoveQuery {
         };
 
         let to = match self.to.clone() {
-            Some(to_str) => Position::try_from(to_str)?.project(color) as u8,
+            Some(to_str) => Position::try_from(to_str)? as u8,
             None => {
                 return Err(ApiError::BadRequest(
                     "Move needs a specified destination cell".to_string(),
