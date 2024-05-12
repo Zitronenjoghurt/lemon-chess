@@ -43,6 +43,8 @@ pub struct GameState {
     pub remis: bool,
     #[serde(default)]
     pub move_log: Vec<(u8, u8)>,
+    #[serde(default)]
+    pub san_log: Vec<String>,
 }
 
 impl GameState {
@@ -77,6 +79,7 @@ impl GameState {
             stalemate: false,
             remis: false,
             move_log: Vec::new(),
+            san_log: Vec::new(),
         };
 
         game_state.update()?;
@@ -124,6 +127,28 @@ impl GameState {
             self.half_move_counter,
             self.full_move_counter
         )
+    }
+
+    pub fn get_san(&self) -> String {
+        let mut result = String::new();
+        let moves = &self.san_log;
+
+        for i in 0..(moves.len() / 2) {
+            let move_number = i + 1;
+            let white_move = &moves[2 * i];
+            let black_move = &moves[2 * i + 1];
+
+            result.push_str(&format!("{}. {} {} ", move_number, white_move, black_move));
+        }
+
+        if moves.len() % 2 != 0 {
+            let last_move_number = moves.len() / 2 + 1;
+            let last_move = &moves[moves.len() - 1];
+
+            result.push_str(&format!("{}. {} ", last_move_number, last_move));
+        }
+
+        result.trim_end().to_string()
     }
 
     pub fn from_fen(fen: &str) -> Result<Self, GameError> {
@@ -248,6 +273,7 @@ impl GameState {
             stalemate: false,
             remis: false,
             move_log: Vec::new(),
+            san_log: Vec::new(),
         };
 
         state.update()?;
@@ -256,7 +282,7 @@ impl GameState {
     }
 
     pub fn make_move(&mut self, from: u8, to: u8) -> Result<bool, GameError> {
-        let (success, capture_or_pawn_move) = self.chess_board.make_move(
+        let (success, capture_or_pawn_move, san_move) = self.chess_board.make_move(
             from,
             to,
             &mut self.en_passant_indices,
@@ -269,6 +295,7 @@ impl GameState {
 
         // Log the move
         self.move_log.push((from, to));
+        self.san_log.push(san_move);
 
         self.update()?;
         self.clock(capture_or_pawn_move);
@@ -291,6 +318,7 @@ impl GameState {
 
         // Log the move, 64 stands for kingside castling
         self.move_log.push((64, color as u8));
+        self.san_log.push("O-O".to_string());
 
         self.update()?;
         self.clock(false);
@@ -313,6 +341,7 @@ impl GameState {
 
         // Log the move, 65 stands for queenside castling
         self.move_log.push((65, color as u8));
+        self.san_log.push("O-O-O".to_string());
 
         self.update()?;
         self.clock(false);

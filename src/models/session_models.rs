@@ -19,6 +19,8 @@ pub struct SessionInfo {
     pub black_player: String,
     /// Forsyth-Edwards Notation of the current game state
     pub fen: String,
+    /// Standard Algebraic Notation
+    pub san: String,
     pub color_to_move: Color,
     pub your_turn: bool,
     pub finished: bool,
@@ -39,6 +41,7 @@ impl SessionInfo {
         let id = session.id.unwrap_or_default();
         let finished = session.is_finished();
         let your_turn = session.can_move(key);
+        let san = session.game_state.get_san();
 
         let white_player =
             match find_user_by_key(&state.database.user_collection, &session.keys[0]).await? {
@@ -58,6 +61,7 @@ impl SessionInfo {
             white_player,
             black_player,
             fen: session.game_state.to_fen(),
+            san,
             color_to_move: Color::from(session.game_state.next_to_move as usize),
             your_turn,
             finished,

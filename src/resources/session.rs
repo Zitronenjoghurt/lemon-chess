@@ -45,6 +45,40 @@ async fn get_session(
     Ok(Json(info).into_response())
 }
 
+/// Retrieve session PGN.
+///
+/// This endpoint returns the PGN (Portable Game Notation) of the specified session.
+#[utoipa::path(
+    get,
+    path = "/session/pgn",
+    responses(
+        (status = 200, description = "Session PGN", content_type = "text/plain"),
+        (status = 400, description = "Missing or invalid session id"),
+        (status = 401, description = "Invalid API Key"),
+        (status = 404, description = "Session not found"),
+        (status = 500, description = "Server error"),
+    ),
+    params(
+        ("session-id" = String, Header, description = "ID of the session"),
+      ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Session"
+)]
+async fn get_session_pgn(
+    ExtractUser(_): ExtractUser,
+    ExtractSession(session): ExtractSession,
+    State(state): State<AppState>,
+) -> Result<Response, ApiError> {
+    let pgn = session.to_pgn(&state).await?;
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/plain")
+        .body(Body::from(pgn))
+        .unwrap())
+}
+
 /// Resign a session.
 ///
 /// This endpoint allows you to resign a chess game.
@@ -287,6 +321,7 @@ async fn post_session_move(
 pub fn router() -> Router<AppState> {
     Router::<AppState>::new()
         .route("/session", get(get_session))
+        .route("/session/pgn", get(get_session_pgn))
         .route("/session", delete(delete_session))
         .route("/sessions", get(get_sessions))
         .route("/session/render", get(get_session_render))

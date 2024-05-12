@@ -281,7 +281,7 @@ impl ChessBoard {
         Ok(())
     }
 
-    /// Returns a tuple of (success, was_capture_or_pawn_move)
+    /// Returns a tuple of (success, was_capture_or_pawn_move, san_move)
     pub fn make_move(
         &mut self,
         from: u8,
@@ -289,23 +289,24 @@ impl ChessBoard {
         en_passant_indices: &mut [u8; 2],
         kingside_castling_rights: &mut [bool; 2],
         queenside_castling_rights: &mut [bool; 2],
-    ) -> Result<(bool, bool), GameError> {
+    ) -> Result<(bool, bool, String), GameError> {
         Self::validate_index(from)?;
         Self::validate_index(to)?;
 
         let (source_piece, source_color) = Self::piece_and_color_at_cell(self, from)?;
         let (target_piece, target_color) = Self::piece_and_color_at_cell(self, to)?;
         if source_piece == Piece::NONE || target_color == source_color {
-            return Ok((false, false));
+            return Ok((false, false, String::new()));
         }
 
-        let mut capture_or_pawn_move = false;
+        let mut capture_move = false;
+        let pawn_move = source_piece == Piece::PAWN;
 
         // Capture piece
         if target_piece != Piece::NONE {
             self.pieces[target_piece as usize].clear_bit(to);
             self.colors[target_color as usize].clear_bit(to);
-            capture_or_pawn_move = true;
+            capture_move = true;
         }
 
         // Update piece
@@ -320,16 +321,22 @@ impl ChessBoard {
 
         // Capture en-passant
         let opponent_color = source_color.opponent_color();
-        if source_piece == Piece::PAWN && to == en_passant_indices[opponent_color as usize] {
-            let captured_pawn_index = match opponent_color {
-                Color::BLACK => to - 8,
-                Color::WHITE => to + 8,
-                Color::NONE => to + 8,
+        let did_en_passant =
+            if source_piece == Piece::PAWN && to == en_passant_indices[opponent_color as usize] {
+                let captured_pawn_index = match opponent_color {
+                    Color::BLACK => to - 8,
+                    Color::WHITE => to + 8,
+                    Color::NONE => to + 8,
+                };
+                self.pieces[Piece::PAWN as usize].clear_bit(captured_pawn_index);
+                self.colors[opponent_color as usize].clear_bit(captured_pawn_index);
+                en_passant_indices[opponent_color as usize] = 64;
+
+                capture_move = true;
+                true
+            } else {
+                false
             };
-            self.pieces[Piece::PAWN as usize].clear_bit(captured_pawn_index);
-            self.colors[opponent_color as usize].clear_bit(captured_pawn_index);
-            en_passant_indices[opponent_color as usize] = 64;
-        }
 
         // Update en-passant
         if source_piece == Piece::PAWN && to.abs_diff(from) == 16 {
@@ -365,18 +372,38 @@ impl ChessBoard {
             }
         }
 
-        // Check if move was a pawn move, should it not already be a capture move yet
-        if source_piece == Piece::PAWN {
-            capture_or_pawn_move = true;
-        }
-
         // Check for queen promotion
-        if source_piece == Piece::PAWN && !(8..=55).contains(&to) {
+        let promotion = if source_piece == Piece::PAWN && !(8..=55).contains(&to) {
             self.pieces[Piece::PAWN as usize].clear_bit(to);
             self.pieces[Piece::QUEEN as usize].set_bit(to);
-        }
+            true
+        } else {
+            false
+        };
 
-        Ok((true, capture_or_pawn_move))
+        let from_str = Position::try_from(from)?.as_str().to_lowercase();
+        let to_str = Position::try_from(to)?.as_str().to_lowercase();
+
+        // SAN / Standard Algebraic Notation
+        let san_move = if pawn_move && !capture_move {
+            if promotion {
+                format!("{}Q", to_str)
+            } else {
+                to_str
+            }
+        } else if pawn_move && capture_move {
+            if promotion {
+                format!("{}x{}Q", from_str, to_str)
+            } else if did_en_passant {
+                format!("{}x{} e.p.", from_str, to_str)
+            } else {
+                format!("{}x{}", from_str, to_str)
+            }
+        } else {
+            format!("{}{}x{}", source_piece.get_letter(), from_str, to_str)
+        };
+
+        Ok((true, capture_move || pawn_move, san_move))
     }
 
     pub fn castle_kingside(&mut self, king_index: u8, rook_index: u8) -> Result<(), GameError> {
@@ -473,7 +500,7 @@ impl ChessBoard {
         let mut future_en_passant_indices = *en_passant_indices;
         let mut future_kingside_castling_rights = *kingside_castling_rights;
         let mut future_queenside_castling_rights = *queenside_castling_rights;
-        if let Ok((success, _)) = future_board.make_move(
+        if let Ok((success, _, _)) = future_board.make_move(
             from,
             to,
             &mut future_en_passant_indices,
@@ -697,7 +724,7 @@ mod tests {
                     &mut [true, true]
                 )
                 .unwrap(),
-            (true, true)
+            (true, true, String::new())
         );
         assert_ne!(
             board
@@ -709,7 +736,7 @@ mod tests {
                     &mut [true, true]
                 )
                 .unwrap(),
-            (true, true)
+            (true, true, String::new())
         );
         assert_eq!(board.piece_at_cell(Pos::H2.into()).unwrap(), Piece::NONE);
         assert_eq!(board.piece_at_cell(Pos::H3.into()).unwrap(), Piece::PAWN);

@@ -1,3 +1,4 @@
+use chrono_tz::UTC;
 use futures::{stream, StreamExt, TryStreamExt};
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
@@ -14,9 +15,11 @@ use crate::{
         response_models::Pagination,
         session_models::{SessionInfo, SessionList},
     },
-    utils::time_operations::timestamp_now_nanos,
+    utils::time_operations::{nanos_to_date, timestamp_now_nanos},
     AppState,
 };
+
+use super::user::find_user_by_key;
 
 #[derive(Serialize, Deserialize)]
 pub struct Session {
@@ -175,6 +178,51 @@ impl Session {
             collection.insert_one(self, Some(options)).await?;
         }
         Ok(())
+    }
+
+    pub async fn to_pgn(&self, state: &AppState) -> Result<String, ApiError> {
+        let white_player =
+            match find_user_by_key(&state.database.user_collection, &self.keys[0]).await? {
+                Some(user) => user.display_name,
+                None => "Unknown".to_string(),
+            };
+
+        let black_player =
+            match find_user_by_key(&state.database.user_collection, &self.keys[1]).await? {
+                Some(user) => user.display_name,
+                None => "Unknown".to_string(),
+            };
+
+        let event = format!("LemonChess Online Game: '{}'", self.name);
+        let date = nanos_to_date(self.created_stamp, &UTC);
+
+        let result = if !self.is_finished() {
+            "*"
+        } else if self.game_state.winner != 2 {
+            if self.game_state.winner == 0 {
+                "1-0"
+            } else {
+                "0-1"
+            }
+        } else {
+            "1/2-1/2"
+        };
+
+        let movetext = self.game_state.get_san();
+
+        let pgn = format!(
+            r#"[Event "{}"]
+[Site "chess.lemon.industries/docs"]
+[Date "{}"]
+[White "{}"]
+[Black "{}"]
+[Result "{}"]
+[Annotator "chess.lemon.industries"]
+{}"#,
+            event, date, white_player, black_player, result, movetext
+        );
+
+        Ok(pgn)
     }
 }
 

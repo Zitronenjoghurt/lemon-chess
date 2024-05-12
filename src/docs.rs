@@ -27,6 +27,7 @@ use utoipa::{
         resources::room::get_rooms,
         resources::room::get_rooms_public,
         resources::session::get_session,
+        resources::session::get_session_pgn,
         resources::session::delete_session,
         resources::session::get_sessions,
         resources::session::get_session_render,
