@@ -17,7 +17,7 @@ use utoipa::{
 #[openapi(
     info(
         title="Lemon Chess",
-        description="A chess web service handling multiplayer, sessions and all game logic.\n\nAll available docs: Rapidoc (/docs), Swagger (/swagger) and Redoc (/redoc).\n\nIf you find bugs or have feedback please create an issue here: https://github.com/Zitronenjoghurt/tamagotchi-api/issues"
+        description="A chess web service handling multiplayer, sessions and all game logic.\n\nAll available docs: Rapidoc (/docs), Swagger (/swagger) and Redoc (/redoc).\n\nIf you find bugs or have feedback please create an issue here: https://github.com/Zitronenjoghurt/lemon-chess/issues"
     ),
     paths(
         resources::ping::get_ping,
