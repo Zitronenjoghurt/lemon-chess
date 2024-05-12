@@ -1,5 +1,5 @@
 use crate::{
-    game::color::Color,
+    game::{color::Color, render::RenderStyle},
     models::{
         move_models::LegalMoves,
         response_models::{MessageResponse, Pagination, UserApiKey},
@@ -44,7 +44,7 @@ use utoipa::{
     ),
     modifiers(&SecurityAddon),
     components(
-        schemas(MessageResponse, UserApiKey, SessionInfo, Color, LegalMoves, SessionList, Pagination, RoomInfo, RoomList),
+        schemas(MessageResponse, UserApiKey, SessionInfo, Color, LegalMoves, SessionList, Pagination, RoomInfo, RoomList, RenderStyle),
     )
 )]
 pub struct ApiDoc;

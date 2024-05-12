@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use utoipa::IntoParams;
 
-use crate::utils::sanitize;
+use crate::{game::render::RenderStyle, utils::sanitize};
 
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
@@ -65,4 +65,17 @@ impl RoomCreation {
 pub struct RoomCode {
     /// The code of the room
     pub code: String,
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct RenderStyleQuery {
+    /// The style that should be used for rendering
+    pub style: Option<RenderStyle>,
+}
+
+impl RenderStyleQuery {
+    pub fn retrieve(&self) -> RenderStyle {
+        self.style.unwrap_or(RenderStyle::MODERN)
+    }
 }

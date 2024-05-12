@@ -5,7 +5,7 @@ use crate::extractors::session_extractor::ExtractSession;
 use crate::game::color::Color;
 use crate::game::render::{render_board_png, render_history_gif};
 use crate::models::move_models::MoveQuery;
-use crate::models::query_models::PaginationQuery;
+use crate::models::query_models::{PaginationQuery, RenderStyleQuery};
 use crate::models::session_models::SessionInfo;
 use crate::AppState;
 use axum::body::Body;
@@ -168,6 +168,7 @@ async fn get_sessions(
         (status = 500, description = "Server error"),
     ),
     params(
+        RenderStyleQuery,
         ("session-id" = String, Header, description = "ID of the session"),
       ),
     security(
@@ -179,6 +180,7 @@ async fn get_session_render(
     ExtractUser(mut user): ExtractUser,
     ExtractSession(session): ExtractSession,
     State(state): State<AppState>,
+    query: Query<RenderStyleQuery>,
 ) -> Result<Response, ApiError> {
     user.rate_limit(&state.database.user_collection, "render", 10)
         .await?;
@@ -186,7 +188,8 @@ async fn get_session_render(
         .get_color_from_key(&user.key)
         .unwrap_or(Color::WHITE);
 
-    match render_board_png(&session.game_state, player_color) {
+    let style = query.retrieve();
+    match render_board_png(&session.game_state, player_color, &style) {
         Ok(image_bytes) => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "image/png")
@@ -213,6 +216,7 @@ async fn get_session_render(
         (status = 500, description = "Server error"),
     ),
     params(
+        RenderStyleQuery,
         ("session-id" = String, Header, description = "ID of the session"),
       ),
     security(
@@ -224,6 +228,7 @@ async fn get_session_render_history(
     ExtractUser(mut user): ExtractUser,
     ExtractSession(session): ExtractSession,
     State(state): State<AppState>,
+    query: Query<RenderStyleQuery>,
 ) -> Result<Response, ApiError> {
     user.rate_limit(&state.database.user_collection, "render_gif", 30)
         .await?;
@@ -232,7 +237,8 @@ async fn get_session_render_history(
         .get_color_from_key(&user.key)
         .unwrap_or(Color::WHITE);
 
-    match render_history_gif(&session.game_state, player_color) {
+    let style = query.retrieve();
+    match render_history_gif(&session.game_state, player_color, &style) {
         Ok(gif_bytes) => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "image/gif")
