@@ -5,11 +5,12 @@ use mongodb::{
     options::{FindOptions, InsertOneOptions, UpdateOptions},
     Collection,
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::ApiError,
-    game::{color::Color, state::GameState},
+    game::{ai::get_next_move, color::Color, state::GameState},
     models::{
         move_models::{LegalMoves, MoveQuery},
         response_models::Pagination,
@@ -33,6 +34,22 @@ pub struct Session {
 
 impl Session {
     pub fn new(name: String, keys: [String; 2], game_state: GameState) -> Self {
+        Self {
+            id: None,
+            name,
+            keys,
+            created_stamp: timestamp_now_nanos(),
+            game_state,
+        }
+    }
+
+    pub fn new_ai(name: String, key: String, game_state: GameState) -> Self {
+        let mut rng = rand::thread_rng();
+        let keys = match rng.gen_bool(0.5) {
+            true => ["AI".to_string(), key],
+            _ => [key, "AI".to_string()],
+        };
+
         Self {
             id: None,
             name,
@@ -74,13 +91,28 @@ impl Session {
             self.game_state.make_move(from, to)
         }?;
 
-        if success {
-            Ok(())
-        } else {
-            Err(ApiError::BadRequest(
+        if !success {
+            return Err(ApiError::BadRequest(
                 "Unable to play that move.".to_string(),
-            ))
+            ));
         }
+
+        // Do AI move if possible
+        self.do_ai_move().map_err(|err| {
+            ApiError::ServerError(format!("An error occured while playing the AI: {}", err))
+        })?;
+
+        Ok(())
+    }
+
+    pub fn do_ai_move(&mut self) -> Result<(), ApiError> {
+        if !self.can_move("AI".to_string()) || self.is_finished() {
+            return Ok(());
+        }
+
+        let next_move = get_next_move(&self.game_state)?;
+        self.do_move("AI", &next_move)?;
+        Ok(())
     }
 
     pub fn get_color_from_key(&self, key: &str) -> Option<Color> {
@@ -231,6 +263,16 @@ pub async fn find_session_by_keys(
     keys: Vec<String>,
 ) -> Result<Option<Session>, ApiError> {
     let filter = doc! { "keys": { "$all": keys.clone() }};
+    let session = collection.find_one(filter, None).await?;
+    Ok(session)
+}
+
+pub async fn find_active_session_by_keys(
+    collection: &Collection<Session>,
+    keys: Vec<String>,
+) -> Result<Option<Session>, ApiError> {
+    let filter =
+        doc! { "keys": { "$all": keys.clone() }, "game_state.winner": 2, "game_state.draw": false};
     let session = collection.find_one(filter, None).await?;
     Ok(session)
 }

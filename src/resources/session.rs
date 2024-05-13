@@ -1,9 +1,12 @@
-use crate::entities::session::find_sessions_by_key_with_pagination;
+use crate::entities::session::{
+    find_active_session_by_keys, find_sessions_by_key_with_pagination, Session,
+};
 use crate::error::ApiError;
 use crate::extractors::authentication::ExtractUser;
 use crate::extractors::session_extractor::ExtractSession;
 use crate::game::color::Color;
 use crate::game::render::{render_board_png, render_history_gif};
+use crate::game::state::GameState;
 use crate::models::move_models::MoveQuery;
 use crate::models::query_models::{PaginationQuery, RenderStyleQuery};
 use crate::models::session_models::SessionInfo;
@@ -38,11 +41,53 @@ use axum::{routing::get, Json, Router};
 )]
 async fn get_session(
     ExtractUser(user): ExtractUser,
-    ExtractSession(session): ExtractSession,
+    ExtractSession(mut session): ExtractSession,
     State(state): State<AppState>,
 ) -> Result<Response, ApiError> {
+    session.do_ai_move()?; // Play AI move if possible, previous errors could have lead to AI not playing
     let info = SessionInfo::from_session(&state, session, user.key).await?;
     Ok(Json(info).into_response())
+}
+
+/// Create AI session.
+///
+/// This endpoint allows you to create an AI session.
+#[utoipa::path(
+    post,
+    path = "/session",
+    responses(
+        (status = 200, description = "Session successfully created"),
+        (status = 400, description = "Can't create session"),
+        (status = 401, description = "Invalid API Key"),
+        (status = 404, description = "Session not found"),
+        (status = 500, description = "Server error"),
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Session"
+)]
+async fn post_session(
+    ExtractUser(user): ExtractUser,
+    State(state): State<AppState>,
+) -> Result<Response, ApiError> {
+    let session = find_active_session_by_keys(
+        &state.database.session_collection,
+        [user.key.clone(), "AI".to_string()].to_vec(),
+    )
+    .await?;
+
+    if session.is_some() {
+        return Err(ApiError::BadRequest(
+            "You already have an active AI session.".to_string(),
+        ));
+    }
+
+    let game_state = GameState::new()?;
+    let mut new_session = Session::new_ai("AI Game".to_string(), user.key.clone(), game_state);
+    new_session.do_ai_move()?; // Does the AI move if the AI goes first
+    new_session.save(&state.database.session_collection).await?;
+    Ok(Json("AI game started").into_response())
 }
 
 /// Retrieve session PGN.
@@ -327,6 +372,7 @@ async fn post_session_move(
 pub fn router() -> Router<AppState> {
     Router::<AppState>::new()
         .route("/session", get(get_session))
+        .route("/session", post(post_session))
         .route("/session/pgn", get(get_session_pgn))
         .route("/session", delete(delete_session))
         .route("/sessions", get(get_sessions))

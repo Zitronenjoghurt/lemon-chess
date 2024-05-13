@@ -115,7 +115,10 @@ impl GameState {
         let en_passant = if en_passant_cell == 64 {
             "-".to_string()
         } else {
-            Position::try_from(en_passant_cell).unwrap().as_str()
+            Position::try_from(en_passant_cell)
+                .unwrap()
+                .as_str()
+                .to_lowercase()
         };
 
         format!(

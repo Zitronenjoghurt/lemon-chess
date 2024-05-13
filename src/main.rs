@@ -21,6 +21,7 @@ pub mod extractors {
 }
 
 pub mod game {
+    pub mod ai;
     pub mod bit_board;
     pub mod chess_board;
     pub mod color;

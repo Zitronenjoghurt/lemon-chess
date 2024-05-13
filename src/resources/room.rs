@@ -8,7 +8,6 @@ use crate::extractors::authentication::ExtractUser;
 use crate::game::state::GameState;
 use crate::models::query_models::{PaginationQuery, RoomCode, RoomCreation};
 use crate::models::room_models::RoomInfo;
-use crate::models::session_models::SessionInfo;
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
@@ -118,7 +117,7 @@ async fn delete_room(
     path = "/room/join",
     params(RoomCode),
     responses(
-        (status = 200, description = "Game started", body = SessionInfo),
+        (status = 200, description = "Game started"),
         (status = 400, description = "Unable to join room"),
         (status = 401, description = "Invalid API Key"),
         (status = 404, description = "Room not found"),
@@ -164,10 +163,7 @@ async fn post_room_join(
 
     delete_room_by_code(&state.database.room_collection, &query.code).await?;
     session.save(&state.database.session_collection).await?;
-
-    let info = SessionInfo::from_session(&state, session, user.key).await?;
-
-    Ok(Json(info).into_response())
+    Ok(Json("Game started").into_response())
 }
 
 /// Retrieve your rooms.

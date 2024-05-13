@@ -68,6 +68,7 @@ impl From<GameError> for ApiError {
             GameError::EncodingError(message) => Self::ParseError(message),
             GameError::ParseError(message) => Self::ParseError(message),
             GameError::ValidationError(message) => Self::BadRequest(message),
+            GameError::AiError(message) => Self::ServerError(message),
         }
     }
 }

@@ -43,17 +43,23 @@ impl SessionInfo {
         let your_turn = session.can_move(key);
         let san = session.game_state.get_san();
 
-        let white_player =
+        let white_player = if &session.keys[0] == "AI" {
+            "AI".to_string()
+        } else {
             match find_user_by_key(&state.database.user_collection, &session.keys[0]).await? {
                 Some(user) => user.display_name,
                 None => "Unknown".to_string(),
-            };
+            }
+        };
 
-        let black_player =
+        let black_player = if &session.keys[1] == "AI" {
+            "AI".to_string()
+        } else {
             match find_user_by_key(&state.database.user_collection, &session.keys[1]).await? {
                 Some(user) => user.display_name,
                 None => "Unknown".to_string(),
-            };
+            }
+        };
 
         let info = Self {
             id: id.to_string(),

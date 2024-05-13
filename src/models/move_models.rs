@@ -6,7 +6,7 @@ use crate::{
     game::{color::Color, position::Position},
 };
 
-#[derive(Deserialize, IntoParams)]
+#[derive(Deserialize, IntoParams, Default)]
 #[into_params(parameter_in = Query)]
 pub struct MoveQuery {
     pub from: Option<String>,
