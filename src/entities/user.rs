@@ -37,6 +37,7 @@ impl User {
     pub async fn new_from_discord(
         collection: &Collection<User>,
         name: &str,
+        display_name: &str,
         id: &str,
     ) -> Result<Self, ApiError> {
         if find_user_by_discord_id(collection, id).await?.is_some() {
@@ -63,7 +64,7 @@ impl User {
         let user = Self {
             key,
             name: user_name.clone(),
-            display_name: user_name,
+            display_name: display_name.to_string(),
             created_stamp: current_stamp,
             permission: PermissionLevel::User,
             last_access_stamp: current_stamp,

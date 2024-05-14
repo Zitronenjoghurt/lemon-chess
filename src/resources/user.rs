@@ -36,8 +36,13 @@ async fn post_user_discord(
 ) -> Result<Response, ApiError> {
     user.permission.authenticate(PermissionLevel::Negotiator)?;
 
-    let user =
-        User::new_from_discord(&state.database.user_collection, &query.name, &query.id).await?;
+    let user = User::new_from_discord(
+        &state.database.user_collection,
+        &query.name,
+        &query.display_name,
+        &query.id,
+    )
+    .await?;
 
     Ok(Json(UserApiKey { api_key: user.key }).into_response())
 }

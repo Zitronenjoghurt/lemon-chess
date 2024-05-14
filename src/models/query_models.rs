@@ -10,6 +10,8 @@ pub struct DiscordUserCreation {
     pub id: String,
     /// The unique name of the user
     pub name: String,
+    /// The name other people will see
+    pub display_name: String,
 }
 
 #[derive(Deserialize, IntoParams)]
