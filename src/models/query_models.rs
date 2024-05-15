@@ -12,6 +12,8 @@ pub struct DiscordUserCreation {
     pub name: String,
     /// The name other people will see
     pub display_name: String,
+    /// If an Api Key is given and the key already exists, it will link the discord id with the given key's user
+    pub api_key: Option<String>,
 }
 
 #[derive(Deserialize, IntoParams)]
