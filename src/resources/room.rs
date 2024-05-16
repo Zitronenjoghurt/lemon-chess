@@ -60,7 +60,7 @@ async fn post_room(
     let name = query.name.unwrap_or(format!(
         "{}'s GAME #{}",
         user.display_name.to_uppercase(),
-        total_count
+        total_count + 1
     ));
     let public = query.public.unwrap_or(true);
 
