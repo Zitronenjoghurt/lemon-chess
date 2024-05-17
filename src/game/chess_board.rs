@@ -42,10 +42,12 @@ pub struct AvailableMoves(pub Vec<(u8, Vec<u8>)>);
 
 impl AvailableMoves {
     pub fn get_moves(&self) -> Result<Vec<Move>, GameError> {
-        let mut moves: Vec<Move> = Vec::new();
+        let mut moves: Vec<Move> = Vec::with_capacity(self.0.len());
+
         for (from, to_indices) in &self.0 {
+            let from_position = Position::try_from(*from)?;
+
             for to in to_indices {
-                let from_position = Position::try_from(*from)?;
                 let to_position = Position::try_from(*to)?;
                 moves.push(Move(from_position, to_position));
             }
@@ -96,7 +98,9 @@ impl ChessBoard {
     }
 
     pub fn to_fen_positions(&self) -> String {
+        // TODO: Use `with_capacity`
         let mut result = String::new();
+        // TODO: Use `with_capacity`
         let mut row_string = String::new();
         let mut empty_cells: u8 = 0;
         for i in (0..64).rev() {
@@ -117,12 +121,13 @@ impl ChessBoard {
             }
 
             if has_piece {
-                row_string.push_str(&piece.get_fen_letter(color));
+                row_string.push_str(piece.get_fen_letter(color));
             }
 
             if is_end_of_row {
                 let reversed_row_string = row_string.chars().rev().collect::<String>();
                 result.push_str(&reversed_row_string);
+                // TODO: You loose your allocation this way! Use `.clear()` instead.
                 row_string = String::new();
 
                 // Prevents trailing / at the end
@@ -181,16 +186,18 @@ impl ChessBoard {
     }
 
     pub fn to_base64(&self) -> Result<String, GameError> {
-        let mut bit_vec = Vec::new();
+        let bit_vec = self
+            .colors
+            .iter()
+            .flat_map(|color_board| color_board.0.to_be_bytes())
+            .chain(
+                self.pieces
+                    .iter()
+                    .flat_map(|piece_board| piece_board.0.to_be_bytes()),
+            )
+            .collect::<Vec<_>>();
 
-        for color_board in &self.colors {
-            bit_vec.append(&mut color_board.0.to_be_bytes().to_vec());
-        }
-        for piece_board in &self.pieces {
-            bit_vec.append(&mut piece_board.0.to_be_bytes().to_vec());
-        }
-
-        Ok(STANDARD.encode(&bit_vec))
+        Ok(STANDARD.encode(bit_vec))
     }
 
     pub fn from_base64(encoded: &str) -> Result<Self, GameError> {
@@ -464,20 +471,20 @@ impl ChessBoard {
             );
 
             let target_indices = action_mask.get_bits();
-            let mut valid_targets: Vec<u8> = Vec::new();
-            for target_index in target_indices {
-                if !Self::does_move_lead_to_check(
-                    self,
-                    color,
-                    index,
-                    target_index,
-                    en_passant_indices,
-                    kingside_castling_rights,
-                    queenside_castling_rights,
-                ) {
-                    valid_targets.push(target_index)
-                }
-            }
+            let valid_targets = target_indices
+                .into_iter()
+                .filter(|target_index| {
+                    !Self::does_move_lead_to_check(
+                        self,
+                        color,
+                        index,
+                        *target_index,
+                        en_passant_indices,
+                        kingside_castling_rights,
+                        queenside_castling_rights,
+                    )
+                })
+                .collect::<Vec<_>>();
             if !valid_targets.is_empty() {
                 piece_moves.push((index, valid_targets))
             }
@@ -528,13 +535,15 @@ impl ChessBoard {
         let block_mask = self.colors[0] | self.colors[1];
         let threat_masks = Piece::get_king_threat_masks(king_index, color, block_mask);
 
-        let mut check_positions: Vec<u8> = Vec::new();
-        for (i, threat_mask) in threat_masks.iter().enumerate() {
-            let threats =
-                *threat_mask & self.pieces[i] & self.colors[color.opponent_color() as usize];
-            check_positions.extend(threats.get_bits());
-        }
-        check_positions
+        threat_masks
+            .iter()
+            .enumerate()
+            .flat_map(|(i, threat_mask)| {
+                let threats =
+                    *threat_mask & self.pieces[i] & self.colors[color.opponent_color() as usize];
+                threats.get_bits()
+            })
+            .collect()
     }
 
     pub fn is_king_check(&self, color: Color) -> bool {

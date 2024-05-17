@@ -1,4 +1,4 @@
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::TryStreamExt;
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
     options::{FindOptions, InsertOneOptions, UpdateOptions},
@@ -74,6 +74,7 @@ pub async fn find_rooms_by_key(
 ) -> Result<Vec<Room>, ApiError> {
     let filter = doc! { "key": key};
     let cursor = collection.find(filter, None).await?;
+    // TODO: Maybe just return the stream instead of collecting?
     let rooms: Vec<Room> = cursor.try_collect().await?;
     Ok(rooms)
 }
@@ -96,9 +97,9 @@ pub async fn find_rooms_by_key_with_pagination(
     let total = collection.count_documents(filter.clone(), None).await? as u32;
 
     let cursor = collection.find(filter, find_options).await?;
-    let rooms: Vec<Room> = cursor.try_collect().await?;
-    let rooms_info: Vec<RoomInfo> = stream::iter(rooms)
-        .then(|room| RoomInfo::from_room(state, room))
+    let rooms_info: Vec<RoomInfo> = cursor
+        .map_err(ApiError::from)
+        .and_then(|room| RoomInfo::from_room(state, room))
         .try_collect()
         .await?;
     let results = rooms_info.len() as u32;
@@ -126,9 +127,9 @@ pub async fn find_public_rooms_with_pagination(
     let total = collection.count_documents(filter.clone(), None).await? as u32;
 
     let cursor = collection.find(filter, find_options).await?;
-    let rooms: Vec<Room> = cursor.try_collect().await?;
-    let rooms_info: Vec<RoomInfo> = stream::iter(rooms)
-        .then(|room| RoomInfo::from_room(state, room))
+    let rooms_info: Vec<RoomInfo> = cursor
+        .map_err(ApiError::from)
+        .and_then(|room| RoomInfo::from_room(state, room))
         .try_collect()
         .await?;
     let results = rooms_info.len() as u32;

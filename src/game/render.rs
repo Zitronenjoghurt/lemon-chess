@@ -15,7 +15,7 @@ pub enum RenderStyle {
 }
 
 struct StyleConfig {
-    asset_path: String,
+    asset_path: &'static str,
     top_left_x: i64,
     top_left_y: i64,
     step_x: i64,
@@ -30,7 +30,7 @@ impl StyleConfig {
     fn new(style: &RenderStyle) -> Self {
         match style {
             RenderStyle::PIXEL => Self {
-                asset_path: "src/assets/pixel/".to_string(),
+                asset_path: "src/assets/pixel/",
                 top_left_x: 7,
                 top_left_y: -2,
                 step_x: 16,
@@ -40,7 +40,7 @@ impl StyleConfig {
                 filter: image::imageops::FilterType::Nearest,
             },
             RenderStyle::MODERN => Self {
-                asset_path: "src/assets/modern/".to_string(),
+                asset_path: "src/assets/modern/",
                 top_left_x: 115,
                 top_left_y: 114,
                 step_x: 102,
@@ -129,6 +129,7 @@ pub fn render_history_gif(
 ) -> Result<Vec<u8>, ApiError> {
     let config = StyleConfig::new(style);
 
+    // TODO: Use `with_capacity`. At least estimate the upper bound.
     let mut buffer = Vec::new();
     let mut cursor = Cursor::new(&mut buffer);
 

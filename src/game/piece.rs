@@ -171,15 +171,15 @@ impl Piece {
         masks
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn get_name(&self) -> &'static str {
         match self {
-            Piece::PAWN => "Pawn".to_string(),
-            Piece::BISHOP => "Bishop".to_string(),
-            Piece::KNIGHT => "Knight".to_string(),
-            Piece::ROOK => "Rook".to_string(),
-            Piece::QUEEN => "Queen".to_string(),
-            Piece::KING => "King".to_string(),
-            Piece::NONE => "None".to_string(),
+            Piece::PAWN => "Pawn",
+            Piece::BISHOP => "Bishop",
+            Piece::KNIGHT => "Knight",
+            Piece::ROOK => "Rook",
+            Piece::QUEEN => "Queen",
+            Piece::KING => "King",
+            Piece::NONE => "None",
         }
     }
 
@@ -192,23 +192,35 @@ impl Piece {
         }
     }
 
-    pub fn get_letter(&self) -> String {
+    pub fn get_letter(&self) -> &'static str {
         match self {
-            Piece::PAWN => "P".to_string(),
-            Piece::BISHOP => "B".to_string(),
-            Piece::KNIGHT => "N".to_string(),
-            Piece::ROOK => "R".to_string(),
-            Piece::QUEEN => "Q".to_string(),
-            Piece::KING => "K".to_string(),
-            Piece::NONE => "X".to_string(),
+            Piece::PAWN => "P",
+            Piece::BISHOP => "B",
+            Piece::KNIGHT => "N",
+            Piece::ROOK => "R",
+            Piece::QUEEN => "Q",
+            Piece::KING => "K",
+            Piece::NONE => "X",
         }
     }
 
-    pub fn get_fen_letter(&self, color: Color) -> String {
+    pub fn get_letter_lowercase(&self) -> &'static str {
+        match self {
+            Piece::PAWN => "p",
+            Piece::BISHOP => "b",
+            Piece::KNIGHT => "n",
+            Piece::ROOK => "r",
+            Piece::QUEEN => "q",
+            Piece::KING => "k",
+            Piece::NONE => "x",
+        }
+    }
+
+    pub fn get_fen_letter(&self, color: Color) -> &'static str {
         if color == Color::WHITE {
             self.get_letter()
         } else {
-            self.get_letter().to_lowercase()
+            self.get_letter_lowercase()
         }
     }
 
