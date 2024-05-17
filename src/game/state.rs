@@ -12,6 +12,8 @@ pub struct GameState {
     pub next_to_move: u8,
     half_move_counter: u8,
     full_move_counter: u8,
+    #[serde(default)]
+    tick: u8,
     /// Initial pawn locations by color, 0 = white, 1 = black
     initial_pawn_masks: [BitBoard; 2],
     /// All available moves (also by color)
@@ -61,6 +63,7 @@ impl GameState {
             next_to_move: 0,
             half_move_counter: 0,
             full_move_counter: 1,
+            tick: 0,
             available_moves: Default::default(),
             check_states: [false, false],
             en_passant_indices: [64, 64],
@@ -259,6 +262,7 @@ impl GameState {
             next_to_move: active_color as u8,
             half_move_counter,
             full_move_counter,
+            tick: 0,
             available_moves: Default::default(),
             check_states: [false, false],
             en_passant_indices: [white_en_passent, black_en_passent],
@@ -369,6 +373,8 @@ impl GameState {
         } else {
             self.next_to_move = 1;
         }
+
+        self.tick += 1;
     }
 
     pub fn update(&mut self) -> Result<(), GameError> {
