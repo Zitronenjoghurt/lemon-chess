@@ -3,7 +3,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::ApiError,
-    game::{color::Color, position::Position},
+    game::{
+        color::Color,
+        position::{Move, Position},
+    },
 };
 
 #[derive(Deserialize, IntoParams, Default)]
@@ -55,7 +58,7 @@ pub struct LegalMoves {
     /// If this color is currently the one to move
     pub current_turn: bool,
     /// Move pairs (from, to) chess cells
-    pub cells: Vec<(String, String)>,
+    pub cells: Vec<Move>,
     /// If the player can castle kingside
     pub castle_kingside: bool,
     /// If the player can castle queenside

@@ -40,7 +40,7 @@ impl SessionInfo {
     ) -> Result<Self, ApiError> {
         let id = session.id.unwrap_or_default();
         let finished = session.is_finished();
-        let your_turn = session.can_move(key);
+        let your_turn = session.can_move(&key);
         let san = session.game_state.get_san();
 
         let white_player = if &session.keys[0] == "AI" {

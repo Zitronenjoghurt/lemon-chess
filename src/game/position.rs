@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use super::error::GameError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 // Prioritizing speed, its faster to just map all 64 coordinates to the respective index
 pub enum Position {
     A1,
@@ -90,8 +92,8 @@ impl std::convert::TryFrom<String> for Position {
         }
 
         let mut chars = value.chars();
-        let file_char = chars.nth(0).unwrap_or_default();
-        let rank_char = chars.nth(0).unwrap_or_default();
+        let file_char = chars.next().unwrap_or_default();
+        let rank_char = chars.next().unwrap_or_default();
 
         if !file_char.is_ascii_alphabetic() || !rank_char.is_ascii_digit() {
             return Err(GameError::DecodingError(format!(
@@ -117,6 +119,7 @@ impl std::convert::TryFrom<String> for Position {
 }
 
 impl From<Position> for u8 {
+    #[inline]
     fn from(val: Position) -> Self {
         val as u8
     }
@@ -137,7 +140,7 @@ impl std::convert::TryFrom<u8> for Position {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Move(pub Position, pub Position);
 
 impl From<Move> for String {

@@ -44,6 +44,7 @@ impl Session {
     }
 
     pub fn new_ai(name: String, key: String, game_state: GameState) -> Self {
+        // TODO: Use `SmallRng`
         let mut rng = rand::thread_rng();
         let keys = match rng.gen_bool(0.5) {
             true => ["AI".to_string(), key],
@@ -60,7 +61,7 @@ impl Session {
     }
 
     pub fn do_move(&mut self, key: &str, chess_move: &MoveQuery) -> Result<(), ApiError> {
-        if !self.can_move(key.to_string()) {
+        if !self.can_move(key) {
             return Err(ApiError::BadRequest(
                 "You can't move in this game.".to_string(),
             ));
@@ -106,7 +107,7 @@ impl Session {
     }
 
     pub fn do_ai_move(&mut self) -> Result<(), ApiError> {
-        if !self.can_move("AI".to_string()) || self.is_finished() {
+        if !self.can_move("AI") || self.is_finished() {
             return Ok(());
         }
 
@@ -152,12 +153,12 @@ impl Session {
         Ok(false)
     }
 
-    pub fn can_move(&self, key: String) -> bool {
-        if self.is_finished() || !self.keys.contains(&key) {
+    pub fn can_move(&self, key: &str) -> bool {
+        if self.is_finished() || !self.keys.iter().any(|k| k == key) {
             return false;
         }
 
-        let color = match self.get_color_from_key(&key) {
+        let color = match self.get_color_from_key(key) {
             Some(color) => color,
             None => return false,
         };
@@ -169,14 +170,9 @@ impl Session {
         let available_moves = &self.game_state.available_moves[color as usize];
         let moves = available_moves.get_moves()?;
 
-        let mut move_pairs: Vec<(String, String)> = Vec::new();
-        for m in moves {
-            move_pairs.push((m.0.as_str(), m.1.as_str()));
-        }
-
         let legal_moves = LegalMoves {
             color,
-            cells: move_pairs,
+            cells: moves,
             current_turn: color as u8 == self.game_state.next_to_move,
             castle_kingside: self.game_state.can_castle_kingside[color as usize],
             castle_queenside: self.game_state.can_castle_queenside[color as usize],

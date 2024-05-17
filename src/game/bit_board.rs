@@ -21,15 +21,7 @@ impl BitBoard {
 
     /// Returns the indizes of all 1's
     pub fn get_bits(&self) -> Vec<u8> {
-        let mut result: Vec<u8> = Vec::new();
-
-        for i in 0..64 {
-            if (self.0 & (1 << i)) != 0 {
-                result.push(i);
-            }
-        }
-
-        result
+        (0..64).filter(|i| (self.0 & (1 << i)) != 0).collect()
     }
 
     pub fn set_bit(&mut self, index: u8) {
@@ -268,6 +260,7 @@ impl Add<u8> for BitBoard {
 
 impl Display for BitBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        // TODO: Use `with_capacity`
         let mut grid = String::new();
         for row in (0..8).rev() {
             for col in 0..8 {

@@ -24,6 +24,9 @@ impl FromRequestParts<AppState> for ExtractSession {
             .headers
             .get(&session_key_header)
             .ok_or(ApiError::BadRequest(
+                // TODO: This string is allocated even if there is no error!
+                // Use lazy evaluation with `ok_or_else`.
+                // Look for such patterns in the code.
                 "session-id header is missing".to_string(),
             ))?
             .to_str()
@@ -31,6 +34,7 @@ impl FromRequestParts<AppState> for ExtractSession {
 
         let session = find_session_by_id(&state.database.session_collection, session_id)
             .await?
+            // TODO: See above.
             .ok_or(ApiError::NotFound("Session not found".to_string()))?;
 
         Ok(ExtractSession(session))
